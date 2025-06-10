@@ -1,0 +1,651 @@
+---
+title: "Populism stereotype pilot - codebook raw"
+author: "Saar Alon-Barkat"
+date: "May 2025"
+format:
+  html:
+    self-contained: true
+    code-fold: true
+    toc: true
+    toc-location: left
+execute:
+  message: false
+  warning: false
+---
+
+
+
+
+
+```{r}
+library(tidyverse)
+library(gt)
+library(gtsummary)
+library(sjPlot)
+library(haven)
+library(labelled)
+library(codebook)
+library(janitor)
+library(lavaan)
+```
+
+Import data
+```{r}
+load(".RData")
+```
+
+
+
+# Populist attitudes
+
+**popular sovereignty**
+
+- **pop1	המילה האחרונה בהחלטות הפוליטיות החשובות ביותר, צריכה להיות של העם (למשל באמצעות משאל עם)**
+- **pop2	בהכרעות פוליטיות חשובות, חייבים לשאול לדעתו של העם**
+- **pop3	העם, ולא נבחרי הציבור, צריכים להיות אלה שמקבלים את החלטות המדיניות החשובות ביותר **
+- pop4	נבחרי הציבור צריכים לפעול על פי רצון העם 
+- pop5	פוליטיקאים לא חייבים לבלות זמן עם אנשים רגילים כדי לעשות עבודה טובה
+- pop6	הדעות של אזרחים רגילים שוות יותר מאשר הדעות של מומחים ופוליטיקאים
+
+
+**Anti elitism**
+
+- pop7	חברי הכנסת מאבדים מהר מאד את הקשר שלהם עם האזרחים הפשוטים
+- **pop8	ההבדלים בין האליטות לעם הם הרבה יותר גדולים מאשר ההבדלים בתוך העם עצמו**
+- pop9	לאנשים כמוני אין באמת שליטה על מה שהממשלה עושה
+- **pop10	פוליטיקאים מדברים הרבה אבל עושים מעט **
+- **pop11	המדינה שלנו מנוהלת בפועל על ידי קבוצה קטנה של בעלי אינטרס חזקים הפועלים לטובת עצמם**
+- **pop12	אליטות שלא נותנות דין וחשבון לאף אחד מונעות מהאזרחים הפשוטים לשפר את חייהם**
+- pop20	לא משנה את מי העם בוחר בבחירות, בסוף מי שקובע באמת מה תהיה המדיניות הן האליטות ששולטות במדינה
+
+
+**Homogeneity**
+
+- **pop13	האנשים הפשוטים פועלים יחד ובשיתוף פעולה **
+- **pop14	אנשים פשוטים הם טובים וישרים**
+- **pop15	האנשים הרגילים חולקים את אותם ערכים ואינטרסים **
+- pop16	למרות שהישראלים שונים מאוד זה מזה, בשורה התחתונה, הם כולם רוצים אותו הדבר 
+
+
+**Menichean**
+
+- **pop17	בסופו של דבר, פוליטיקה היא מאבק בין העם לבעלי הכוח**
+- **pop18	פוליטיקה היא למעשה מאבק בין טוב לרע**
+- **pop19	מה שאנשים מכנים 'פשרה' בפוליטיקה הוא למעשה ויתור על עקרונות**
+
+
+
+
+
+## Alpha
+
+```{r}
+pilot %>% 
+  dplyr::select(pop1_n:pop20_n) %>% 
+  sjPlot::tab_itemscale()
+```
+
+
+
+popular sovereignty
+```{r}
+pilot %>% 
+  dplyr::select(pop1_n:pop6_n) %>% 
+  sjPlot::tab_itemscale()
+```
+
+removing pop5 & pop6 increases alpha
+
+```{r}
+pilot %>% 
+  dplyr::select(pop1_n:pop4_n) %>% 
+  sjPlot::tab_itemscale()
+```
+
+
+Anti elitism
+```{r}
+pilot %>% 
+  dplyr::select(pop7_n:pop12_n) %>% 
+  sjPlot::tab_itemscale()
+```
+
+
+removing pop7, pop9, pop20 increases alpha
+
+```{r}
+pilot %>% 
+  dplyr::select(pop8_n,pop10_n:pop12_n) %>% 
+  sjPlot::tab_itemscale()
+```
+
+
+Homogeneity
+```{r}
+pilot %>% 
+  dplyr::select(pop13_n:pop16_n) %>% 
+  sjPlot::tab_itemscale()
+```
+
+Menichean
+```{r}
+pilot %>% 
+  dplyr::select(pop17_n:pop19_n) %>% 
+  sjPlot::tab_itemscale()
+```
+
+
+
+## CFA 
+
+
+### 1 factor 
+
+```{r}
+cfa.model.1factor <- '
+  one_factor =~ pop1_n + pop2_n + pop3_n + pop4_n + pop5_n +
+                pop6_n + pop7_n + pop8_n + pop9_n + pop10_n +
+                pop11_n + pop12_n + pop13_n + pop14_n + pop15_n +
+                pop16_n + pop17_n + pop18_n + pop19_n + pop20_n'
+
+fit.cfa.model.1factor <- cfa(cfa.model.1factor,# model formula,
+                             data = pilot,
+                             se = "robust",
+                             std.lv = T)
+
+summary(fit.cfa.model.1factor, fit.measures = TRUE, standardize = TRUE)
+```
+
+
+### 4 factor model
+
+```{r}
+cfa.model.4factor <- '
+  Popular_sovereignty =~ pop1_n + pop2_n + pop3_n + pop4_n + pop5_n + pop6_n
+  Anti_elitism =~ pop7_n + pop8_n + pop9_n + pop10_n + pop11_n + pop12_n + pop20_n
+  Homogeneity =~  pop13_n + pop14_n + pop15_n + pop16_n
+  Manichean =~  pop17_n + pop18_n + pop19_n'
+
+fit.cfa.model.4factor <- cfa(cfa.model.4factor,# model formula,
+                             data = pilot,
+                             se = "robust",
+                             std.lv = T)
+
+summary(fit.cfa.model.4factor, fit.measures = TRUE, standardize = TRUE)
+```
+
+### 4 factor model adjusted
+
+```{r}
+cfa.model.4factor <- '
+  Popular_sovereignty =~ pop1_n + pop2_n + pop3_n
+  Anti_elitism =~ pop8_n + pop10_n + pop11_n + pop12_n
+  Homogeneity =~  pop13_n + pop14_n + pop15_n
+  Manichean =~  pop17_n + pop18_n + pop19_n'
+
+fit.cfa.model.4factor <- cfa(cfa.model.4factor,# model formula,
+                             data = pilot,
+                             se = "robust",
+                             std.lv = T)
+
+summary(fit.cfa.model.4factor, fit.measures = TRUE, standardize = TRUE)
+```
+
+
+### second-order model
+
+```{r}
+cfa.model.2ndorder <- '
+  # First-order factors
+  Popular_sovereignty =~ pop1_n + pop2_n + pop3_n
+  Anti_elitism        =~ pop8_n + pop10_n + pop11_n + pop12_n
+  Homogeneity         =~ pop13_n + pop14_n + pop15_n
+  Manichean           =~ pop17_n + pop18_n + pop19_n
+
+  # Second-order factor
+  Populism =~ Popular_sovereignty + Anti_elitism + Homogeneity + Manichean
+'
+
+fit.cfa.model.2ndorder <- cfa(cfa.model.2ndorder,# model formula,
+                             data = pilot,
+                             se = "robust",
+                             std.lv = T)
+
+summary(fit.cfa.model.2ndorder, fit.measures = TRUE, standardize = TRUE)
+```
+
+```{r}
+modificationIndices(fit.cfa.model.2ndorder, sort = TRUE, minimum.value = 10)
+
+```
+
+```{r}
+library(semTools)
+reliability(fit.cfa.model.2ndorder)
+```
+
+
+## Destribution of dimensions (scales)
+
+
+**popular sovereignty**
+
+- **pop1	המילה האחרונה בהחלטות הפוליטיות החשובות ביותר, צריכה להיות של העם (למשל באמצעות משאל עם)**
+- **pop2	בהכרעות פוליטיות חשובות, חייבים לשאול לדעתו של העם**
+- **pop3	העם, ולא נבחרי הציבור, צריכים להיות אלה שמקבלים את החלטות המדיניות החשובות ביותר **
+
+
+**Anti elitism**
+
+- **pop8	ההבדלים בין האליטות לעם הם הרבה יותר גדולים מאשר ההבדלים בתוך העם עצמו**
+- **pop10	פוליטיקאים מדברים הרבה אבל עושים מעט **
+- **pop11	המדינה שלנו מנוהלת בפועל על ידי קבוצה קטנה של בעלי אינטרס חזקים הפועלים לטובת עצמם**
+- **pop12	אליטות שלא נותנות דין וחשבון לאף אחד מונעות מהאזרחים הפשוטים לשפר את חייהם**
+
+
+**Homogeneity**
+
+- **pop13	האנשים הפשוטים פועלים יחד ובשיתוף פעולה **
+- **pop14	אנשים פשוטים הם טובים וישרים**
+- **pop15	האנשים הרגילים חולקים את אותם ערכים ואינטרסים **
+
+
+**Manichean outlook**
+
+- **pop17	בסופו של דבר, פוליטיקה היא מאבק בין העם לבעלי הכוח**
+- **pop18	פוליטיקה היא למעשה מאבק בין טוב לרע**
+- **pop19	מה שאנשים מכנים 'פשרה' בפוליטיקה הוא למעשה ויתור על עקרונות**
+
+
+
+```{r}
+pilot <- pilot %>% 
+  mutate(popular_sovereignty = (((pop1_n + pop2_n + pop3_n)/3-1)/4),
+  anti_elitism        = (((pop8_n + pop10_n + pop11_n + pop12_n)/4-1)/4),
+  homogeneity         = (((pop13_n + pop14_n + pop15_n)/3-1)/4),
+  manichean           = (((pop17_n + pop18_n + pop19_n)/3-1)/4)) %>% 
+  mutate(populist_attitudes_index_4dim = (popular_sovereignty+anti_elitism+homogeneity+manichean)/4,
+         populist_attitudes_index_3dim = (popular_sovereignty+anti_elitism+homogeneity)/3)
+```
+
+```{r}
+pilot %>% 
+  dplyr::select(popular_sovereignty:manichean) %>% 
+  sjmisc::descr()
+```
+
+```{r}
+hist(pilot$popular_sovereignty)
+hist(pilot$anti_elitism)
+hist(pilot$homogeneity)
+hist(pilot$manichean)
+
+hist(pilot$populist_attitudes_index_4dim)
+hist(pilot$populist_attitudes_index_3dim)
+```
+
+```{r}
+
+pilot %>% 
+  dplyr::select(popular_sovereignty:manichean) %>% 
+GGally::ggpairs()
+```
+
+## Populist attitudes and partisanship
+
+```{r}
+pilot %>%
+  mutate(
+    party_vote_past = labelled::to_factor(party_vote_past)
+  ) %>%
+  group_by(party_vote_past) %>%
+  mutate(mean_pop = mean(populist_attitudes_index_4dim, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_past = fct_reorder(party_vote_past, mean_pop)) %>%
+  ggplot(aes(x = party_vote_past, y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes Index",
+    title = "Populist Attitudes by Past Vote"
+  ) +
+  theme_minimal()
+```
+
+
+
+```{r}
+pilot %>%
+  drop_na(party_vote_intention) %>% 
+  mutate(
+    party_vote_intention = labelled::to_factor(party_vote_intention)
+  ) %>%
+  group_by(party_vote_intention) %>%
+  mutate(mean_pop = mean(populist_attitudes_index_4dim, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_intention = fct_reorder(party_vote_intention, mean_pop)) %>%
+  ggplot(aes(x = party_vote_intention, y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes Index (4 dimensions)",
+    title = "Populist Attitudes by Voting Intention"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot %>%
+  mutate(
+    party_vote_intention = labelled::to_factor(party_vote_intention)
+  ) %>%
+  group_by(party_vote_intention) %>%
+  mutate(mean_pop = mean(populist_attitudes_index_3dim, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_intention = fct_reorder(party_vote_intention, mean_pop)) %>%
+  ggplot(aes(x = party_vote_intention, y = populist_attitudes_index_3dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes Index (3 dimensions)",
+    title = "Populist Attitudes by Voting Intention"
+  ) +
+  theme_minimal()
+```
+
+
+
+
+```{r}
+pilot %>%
+  mutate(
+    political_block = labelled::to_factor(political_block)
+  ) %>%
+  group_by(political_block) %>%
+  mutate(mean_pop = mean(populist_attitudes_index_4dim, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(political_block = fct_reorder(political_block, mean_pop)) %>%
+  ggplot(aes(x = political_block, y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes Index",
+    title = "Populist Attitudes by political blocks"
+  ) +
+  theme_minimal()
+```
+
+
+```{r}
+pilot %>%
+  drop_na(right_left_ideology) %>% 
+  ggplot(aes(x = right_left_ideology %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by Ideology"
+  ) +
+  theme_minimal()
+```
+
+
+
+#### Anti elitism and partisanship
+
+```{r}
+pilot %>%
+  mutate(
+    party_vote_past = labelled::to_factor(party_vote_past)
+  ) %>%
+  group_by(party_vote_past) %>%
+  mutate(mean_pop = mean(anti_elitism, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_past = fct_reorder(party_vote_past, mean_pop)) %>%
+  ggplot(aes(x = party_vote_past, y = anti_elitism)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Anti_elitism",
+    title = "Populist Attitudes by Past Vote"
+  ) +
+  theme_minimal()
+```
+
+
+
+```{r}
+pilot %>%
+  mutate(
+    party_vote_intention = labelled::to_factor(party_vote_intention)
+  ) %>%
+  group_by(party_vote_intention) %>%
+  mutate(mean_pop = mean(anti_elitism, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_intention = fct_reorder(party_vote_intention, mean_pop)) %>%
+  ggplot(aes(x = party_vote_intention, y = anti_elitism)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Anti_elitism",
+    title = "Populist Attitudes by Voting Intention"
+  ) +
+  theme_minimal()
+```
+
+
+
+
+
+```{r}
+pilot %>%
+  mutate(
+    political_block = labelled::to_factor(political_block)
+  ) %>%
+  group_by(political_block) %>%
+  mutate(mean_pop = mean(anti_elitism, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(political_block = fct_reorder(political_block, mean_pop)) %>%
+  ggplot(aes(x = political_block, y = anti_elitism)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Anti_elitism",
+    title = "Populist Attitudes by Voting Intention"
+  ) +
+  theme_minimal()
+```
+
+
+
+```{r}
+pilot %>%
+  drop_na(right_left_ideology) %>% 
+  ggplot(aes(x = right_left_ideology %>% labelled::to_factor(), y = anti_elitism)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by Ideology"
+  ) +
+  theme_minimal()
+```
+
+
+### Correlations with other variables
+
+
+
+
+```{r}
+pilot %>%
+  drop_na(education) %>% 
+  ggplot(aes(x = education %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by education"
+  ) +
+  theme_minimal()
+```
+
+
+```{r}
+pilot %>%
+  drop_na(income) %>% 
+  ggplot(aes(x = income %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by income"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot %>%
+  drop_na(religiosity) %>% 
+  ggplot(aes(x = religiosity %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by religiosity"
+  ) +
+  theme_minimal()
+```
+
+
+
+```{r}
+pilot %>%
+  drop_na(ethnic_identity) %>% 
+  ggplot(aes(x = ethnic_identity %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by ethnic_identity"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot %>%
+  drop_na(public_sector_employee_current, populist_attitudes_index_4dim) %>%
+  mutate(public_sector_employee_current = labelled::to_factor(public_sector_employee_current)) %>%
+  ggplot(aes(x = populist_attitudes_index_4dim, fill = public_sector_employee_current)) +
+  geom_histogram(position = "identity", alpha = 0.5, bins = 30, color = "black") +
+  labs(
+    x = "Populist Attitudes Index",
+    y = "Count",
+    title = "Distribution of Populist Attitudes by public_sector_employee_current"
+  ) +
+  theme_minimal()
+```
+
+
+
+```{r}
+pilot %>%
+  drop_na(gender, populist_attitudes_index_4dim) %>%
+  mutate(gender = labelled::to_factor(gender)) %>%
+  ggplot(aes(x = populist_attitudes_index_4dim, fill = gender)) +
+  geom_histogram(position = "identity", alpha = 0.5, bins = 30, color = "black") +
+  labs(
+    x = "Populist Attitudes Index",
+    y = "Count",
+    title = "Distribution of Populist Attitudes by Gender"
+  ) +
+  theme_minimal()
+```
+
+
+```{r}
+pilot %>% 
+  dplyr::select(populist_attitudes_index_4dim,
+                populist_attitudes_index_3dim,
+                popular_attitudes_minimum,
+                popular_sovereignty:manichean,
+                female,
+                age_group,
+                income,
+                subjective_social_economic_status,
+                education,
+                religiosity,
+                right_left_ideology,
+                external_efficecy,
+                watch_ch14) %>% labelled::remove_labels() %>% 
+  sjPlot::tab_corr(triangle = "lower")
+```
+
+
+
+
+
+
+```{r}
+model_1 <- lm(populist_attitudes_index_4dim ~ female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                external_efficecy+
+                subjective_social_economic_status+
+                watch_ch14,pilot %>% labelled::remove_labels(),na.rm=T)
+
+model_2 <- model_1 %>% update(popular_sovereignty~.)
+model_3 <- model_1 %>% update(anti_elitism~.)
+model_4 <- model_1 %>% update(homogeneity~.)
+model_5 <- model_1 %>% update(manichean~.)
+
+
+sjPlot::tab_model(model_1,model_2,model_3,model_4,model_5,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+
+
