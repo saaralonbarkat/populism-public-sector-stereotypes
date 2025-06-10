@@ -52,12 +52,11 @@ load(".RData")
 
 - pop7	חברי הכנסת מאבדים מהר מאד את הקשר שלהם עם האזרחים הפשוטים
 - **pop8	ההבדלים בין האליטות לעם הם הרבה יותר גדולים מאשר ההבדלים בתוך העם עצמו**
-- pop9	לאנשים כמוני אין באמת שליטה על מה שהממשלה עושה
-- **pop10	פוליטיקאים מדברים הרבה אבל עושים מעט **
-- **pop11	המדינה שלנו מנוהלת בפועל על ידי קבוצה קטנה של בעלי אינטרס חזקים הפועלים לטובת עצמם**
-- **pop12	אליטות שלא נותנות דין וחשבון לאף אחד מונעות מהאזרחים הפשוטים לשפר את חייהם**
-- pop20	לא משנה את מי העם בוחר בבחירות, בסוף מי שקובע באמת מה תהיה המדיניות הן האליטות ששולטות במדינה
-
+- pop9	פוליטיקאים מדברים הרבה אבל עושים מעט 
+- **pop10	המדינה שלנו מנוהלת בפועל על ידי קבוצה קטנה של בעלי אינטרס חזקים הפועלים לטובת עצמם**
+- **pop11	אליטות שלא נותנות דין וחשבון לאף אחד מונעות מהאזרחים הפשוטים לשפר את חייהם**
+- **pop12	לא משנה את מי העם בוחר בבחירות, בסוף מי שקובע באמת מה תהיה המדיניות הן האליטות ששולטות במדינה**
+- pop20	לאנשים כמוני אין באמת שליטה על מה שהממשלה עושה
 
 **Homogeneity**
 
@@ -74,6 +73,11 @@ load(".RData")
 - **pop19	מה שאנשים מכנים 'פשרה' בפוליטיקה הוא למעשה ויתור על עקרונות**
 
 
+```{r}
+pilot %>% 
+  dplyr::select(pop1_n:pop20_n) %>% 
+  sjPlot::tab_corr()
+```
 
 
 
@@ -106,7 +110,7 @@ pilot %>%
 Anti elitism
 ```{r}
 pilot %>% 
-  dplyr::select(pop7_n:pop12_n) %>% 
+  dplyr::select(pop7_n:pop12_n,pop20_n) %>% 
   sjPlot::tab_itemscale()
 ```
 
@@ -228,34 +232,29 @@ reliability(fit.cfa.model.2ndorder)
 ## Destribution of dimensions (scales)
 
 
-**popular sovereignty**
-
-- **pop1	המילה האחרונה בהחלטות הפוליטיות החשובות ביותר, צריכה להיות של העם (למשל באמצעות משאל עם)**
-- **pop2	בהכרעות פוליטיות חשובות, חייבים לשאול לדעתו של העם**
-- **pop3	העם, ולא נבחרי הציבור, צריכים להיות אלה שמקבלים את החלטות המדיניות החשובות ביותר **
-
-
-**Anti elitism**
-
-- **pop8	ההבדלים בין האליטות לעם הם הרבה יותר גדולים מאשר ההבדלים בתוך העם עצמו**
-- **pop10	פוליטיקאים מדברים הרבה אבל עושים מעט **
-- **pop11	המדינה שלנו מנוהלת בפועל על ידי קבוצה קטנה של בעלי אינטרס חזקים הפועלים לטובת עצמם**
-- **pop12	אליטות שלא נותנות דין וחשבון לאף אחד מונעות מהאזרחים הפשוטים לשפר את חייהם**
+popular sovereignty
+- pop1	המילה האחרונה בהחלטות הפוליטיות החשובות ביותר, צריכה להיות של העם (למשל באמצעות משאל עם)
+- pop2	בהכרעות פוליטיות חשובות, חייבים לשאול לדעתו של העם
+- pop3	העם, ולא נבחרי הציבור, צריכים להיות אלה שמקבלים את החלטות המדיניות החשובות ביותר 
 
 
-**Homogeneity**
+Anti elitism
+- pop8	ההבדלים בין האליטות לעם הם הרבה יותר גדולים מאשר ההבדלים בתוך העם עצמו
+- pop10	המדינה שלנו מנוהלת בפועל על ידי קבוצה קטנה של בעלי אינטרס חזקים הפועלים לטובת עצמם
+- pop11	אליטות שלא נותנות דין וחשבון לאף אחד מונעות מהאזרחים הפשוטים לשפר את חייהם
+- pop12	לא משנה את מי העם בוחר בבחירות, בסוף מי שקובע באמת מה תהיה המדיניות הן האליטות ששולטות במדינה
 
-- **pop13	האנשים הפשוטים פועלים יחד ובשיתוף פעולה **
-- **pop14	אנשים פשוטים הם טובים וישרים**
-- **pop15	האנשים הרגילים חולקים את אותם ערכים ואינטרסים **
+
+Homogeneity
+- pop13	האנשים הפשוטים פועלים יחד ובשיתוף פעולה 
+- pop14	אנשים פשוטים הם טובים וישרים
+- pop15	האנשים הרגילים חולקים את אותם ערכים ואינטרסים 
 
 
-**Manichean outlook**
-
-- **pop17	בסופו של דבר, פוליטיקה היא מאבק בין העם לבעלי הכוח**
-- **pop18	פוליטיקה היא למעשה מאבק בין טוב לרע**
-- **pop19	מה שאנשים מכנים 'פשרה' בפוליטיקה הוא למעשה ויתור על עקרונות**
-
+Menichean
+- pop17	בסופו של דבר, פוליטיקה היא מאבק בין העם לבעלי הכוח
+- pop18	פוליטיקה היא למעשה מאבק בין טוב לרע
+- pop19	מה שאנשים מכנים 'פשרה' בפוליטיקה הוא למעשה ויתור על עקרונות
 
 
 ```{r}
@@ -603,10 +602,47 @@ pilot %>%
 
 
 ```{r}
+pilot %>%
+  drop_na(affect_right) %>% 
+  ggplot(aes(x = affect_right %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by affect_right"
+  ) +
+  theme_minimal()
+```
+
+
+
+
+
+```{r}
+pilot %>%
+  drop_na(affect_left) %>% 
+  ggplot(aes(x = affect_left %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by affect_left"
+  ) +
+  theme_minimal()
+```
+
+
+
+```{r}
 pilot %>% 
   dplyr::select(populist_attitudes_index_4dim,
                 populist_attitudes_index_3dim,
-                popular_attitudes_minimum,
                 popular_sovereignty:manichean,
                 female,
                 age_group,
@@ -616,6 +652,8 @@ pilot %>%
                 religiosity,
                 right_left_ideology,
                 external_efficecy,
+                affect_right,
+                affect_left,
                 watch_ch14) %>% labelled::remove_labels() %>% 
   sjPlot::tab_corr(triangle = "lower")
 ```
