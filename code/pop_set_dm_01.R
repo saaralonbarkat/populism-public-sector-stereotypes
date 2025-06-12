@@ -48,7 +48,7 @@ pilot <- pilot %>%
          affect_right = dplyr::coalesce(q161_1,q192_1),
          affect_left = dplyr::coalesce(q162_1,q193_1)
   ) %>% 
-
+mutate(affective_polarization = abs(affect_right-affect_left))
 # Media
   mutate(
     watch_tv = dplyr::coalesce(q197_1, q196_1),
@@ -259,6 +259,8 @@ responses_civil_servants_all_direction <- bind_rows(responses_civil_servants_dir
 
 readr::write_excel_csv(responses_civil_servants_all_direction,"responses_civil servants_all.csv")
 
+
+save.image()
 
 
 

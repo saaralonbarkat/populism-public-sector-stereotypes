@@ -677,12 +677,13 @@ coord_flip() +
 
 ```{r}
 pilot %>%
-  drop_na(affect_left) %>% 
-  ggplot(aes(x = affect_left %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
-  geom_boxplot() +
+  drop_na(affective_polarization) %>% 
+  filter(political_block %in% 1:3) %>% 
+  ggplot(aes(x = affective_polarization, y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  geom_smooth(method="lm")+
   stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
       stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
-coord_flip() +
   labs(
     x = NULL,
     y = "Populist Attitudes index",
@@ -691,6 +692,41 @@ coord_flip() +
   theme_minimal()
 ```
 
+```{r}
+pilot %>%
+  drop_na(affective_polarization) %>% 
+  filter(political_block %in% 1:3) %>% 
+  ggplot(aes(x = affective_polarization, y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  geom_smooth(method="lm")+
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by affect_left"
+  ) +
+  facet_wrap(vars(political_block %>% labelled::to_factor()))+
+  theme_minimal()
+```
+
+```{r}
+pilot %>%
+  drop_na(affective_polarization) %>% 
+  filter(political_block %in% 1:4) %>% 
+  ggplot(aes(x = right_left_ideology, y = affective_polarization,color=political_block%>% labelled::to_factor())) +
+  geom_jitter(alpha=0.5) +
+  geom_smooth(method="lm")+
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+  labs(
+    x = "Right left ideology (7=extreme left)",
+    y = "Affective polarization\n(abs(affect_right-affect_left))",
+    title = "Populist Attitudes by affect_left",
+    color="Political Block"
+  ) +
+  #facet_wrap(vars(political_block %>% labelled::to_factor()))+
+  theme_minimal()
+```
 
 
 ```{r}
@@ -706,8 +742,7 @@ pilot %>%
                 religiosity,
                 right_left_ideology,
                 external_efficecy,
-                affect_right,
-                affect_left,
+                affective_polarization,
                 watch_ch14) %>% labelled::remove_labels() %>% 
   sjPlot::tab_corr(triangle = "lower")
 ```
@@ -725,7 +760,7 @@ model_1 <- lm(populist_attitudes_index_4dim ~ female +
                 right_left_ideology+
                 external_efficecy+
                 subjective_social_economic_status+
-                watch_ch14,pilot %>% labelled::remove_labels(),na.rm=T)
+                affective_polarization,pilot %>% labelled::remove_labels() %>% drop_na(right_left_ideology),na.rm=T)
 
 model_2 <- model_1 %>% update(popular_sovereignty~.)
 model_3 <- model_1 %>% update(anti_elitism~.)
@@ -755,10 +790,67 @@ responses %>%
   mutate(response_direction = as.numeric(response_direction)) %>% 
   dplyr::select(entity,
                 response_direction,
-                assertiveness:other) %>% 
+                assertiveness:other,
+                ) %>% 
   gtsummary::tbl_summary(by=entity)
 
 ```
+
+
+
+
+Ability
+```{r}
+responses %>% 
+  filter(ability==1) %>% 
+  ggplot(aes(x=response_direction))+
+  geom_bar()+
+  facet_wrap(vars(entity))+
+  theme_blank()+
+  labs(title = "Ability - dimension distribution")
+
+```
+
+Morality
+```{r}
+responses %>% 
+  filter(morality==1) %>% 
+  ggplot(aes(x=response_direction))+
+  geom_bar()+
+  facet_wrap(vars(entity))+
+  theme_blank()+
+  labs(title = "Morality - dimension distribution")
+
+```
+
+
+Assertiveness
+```{r}
+responses %>% 
+  filter(assertiveness==1) %>% 
+  ggplot(aes(x=response_direction))+
+  geom_bar()+
+  facet_wrap(vars(entity))+
+  theme_blank()+
+  labs(title = "Assertiveness - dimension distribution")
+
+```
+
+
+
+Status
+```{r}
+responses %>% 
+  filter(status.x==1) %>% 
+  ggplot(aes(x=response_direction))+
+  geom_bar()+
+  facet_wrap(vars(entity))+
+  theme_blank()+
+  labs(title = "Assertiveness - dimension distribution")
+
+```
+
+
 
 ```{r}
 responses %>% 
@@ -770,6 +862,7 @@ responses %>%
   
 ```
 
+
 Civil servants
 ```{r}
 tmod1 <- lm(response_direction~populist_attitudes_index_4dim,data=responses %>% filter(entity=="civil servants") %>% labelled::remove_labels())
@@ -780,13 +873,13 @@ tmod2 <- tmod1 %>% update(.~.+
                 education+
                 right_left_ideology+
                 external_efficecy+
-                subjective_social_economic_status)
+                subjective_social_economic_status+
+                  public_sector_employee_current)
 
 sjPlot::tab_model(tmod1,tmod2,
                   show.est = F,
                   show.std = T,
                   collapse.ci = T)
-
 ```
 
 
@@ -800,7 +893,8 @@ tmod2 <- tmod1 %>% update(.~.+
                 education+
                 right_left_ideology+
                 external_efficecy+
-                subjective_social_economic_status)
+                subjective_social_economic_status+
+                  public_sector_employee_current)
 
 sjPlot::tab_model(tmod1,tmod2,
                   show.est = F,
@@ -820,7 +914,8 @@ tmod2 <- tmod1 %>% update(.~.+
                 education+
                 right_left_ideology+
                 external_efficecy+
-                subjective_social_economic_status)
+                subjective_social_economic_status+
+                  public_sector_employee_current)
 
 sjPlot::tab_model(tmod1,tmod2,
                   show.est = F,
@@ -837,14 +932,14 @@ responses %>%
   filter(entity=="civil servants") %>% 
   ggplot(aes(x=populist_attitudes_index_4dim,y=morality))+
   geom_point()+
-  geom_smooth()+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
   theme_blank()
 
 responses %>% 
   filter(entity=="civil servants") %>% 
   ggplot(aes(x=populist_attitudes_index_4dim,y=ability))+
   geom_point()+
-  geom_smooth()+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
   theme_blank()
 
 
@@ -852,7 +947,15 @@ responses %>%
   filter(entity=="civil servants") %>% 
   ggplot(aes(x=populist_attitudes_index_4dim,y=assertiveness))+
   geom_point()+
-  geom_smooth()+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
+  theme_blank()
+
+
+responses %>% 
+  filter(entity=="civil servants") %>% 
+  ggplot(aes(x=populist_attitudes_index_4dim,y=status.x))+
+  geom_point()+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
   theme_blank()
 
 ```
@@ -860,15 +963,17 @@ responses %>%
 
 
 ```{r}
-tmod1 <- lm(morality~populist_attitudes_index_4dim,family="binomial" ,data=responses %>% filter(entity=="civil servants") %>% labelled::remove_labels())
+tmod1 <- glm(morality~populist_attitudes_index_4dim,family="binomial" ,data=responses %>% filter(entity=="civil servants") %>% labelled::remove_labels())
 tmod2 <- tmod1 %>% update(.~.+
                             female +
                 age_group+
                 income+
                 education+
                 right_left_ideology+
+                  affective_polarization+
                 external_efficecy+
-                subjective_social_economic_status)
+                subjective_social_economic_status+
+                  public_sector_employee_current)
 
 tmod3 <- tmod1 %>% update(ability~.)
 tmod4 <- tmod2 %>% update(ability~.)
@@ -880,7 +985,35 @@ tmod6 <- tmod2 %>% update(assertiveness~.)
 sjPlot::tab_model(tmod1,tmod2,
                   tmod3,tmod4,
                   tmod5,tmod6,
-                  collapse.ci = T)
+                  collapse.ci = T,
+                  title = "Civil servants - frequency of dimensions")
+```
+
+
+
+```{r}
+responses %>% 
+  filter(entity=="civil servants") %>% 
+  ggplot(aes(x=anti_elitism,y=morality))+
+  geom_point()+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
+  theme_blank()
+
+responses %>% 
+  filter(entity=="civil servants") %>% 
+  ggplot(aes(x=anti_elitism,y=ability))+
+  geom_point()+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
+  theme_blank()
+
+
+responses %>% 
+  filter(entity=="civil servants") %>% 
+  ggplot(aes(x=anti_elitism,y=assertiveness))+
+  geom_point()+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
+  theme_blank()
+
 ```
 
 
@@ -919,13 +1052,16 @@ tmod2 <- tmod1 %>% update(.~.+
                 income+
                 education+
                 right_left_ideology+
+                  affective_polarization+
                 external_efficecy+
-                subjective_social_economic_status)
+                subjective_social_economic_status+
+                  public_sector_employee_current)
 
 sjPlot::tab_model(tmod1,tmod2,
                   show.est = F,
                   show.std = T,
-                  collapse.ci = T)
+                  collapse.ci = T,
+                  title = "Civil servants - direction of morality")
 ```
 
 
@@ -936,14 +1072,22 @@ responses %>%
   filter(entity=="junior civil servants") %>% 
   ggplot(aes(x=populist_attitudes_index_4dim,y=morality))+
   geom_point()+
-  geom_smooth(method="lm")+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
   theme_blank()
 
 responses %>% 
   filter(entity=="junior civil servants") %>% 
   ggplot(aes(x=populist_attitudes_index_4dim,y=ability))+
   geom_point()+
-  geom_smooth(method="lm")+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
+  theme_blank()
+
+
+responses %>% 
+  filter(entity=="junior civil servants") %>% 
+  ggplot(aes(x=populist_attitudes_index_4dim,y=assertiveness))+
+  geom_point()+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
   theme_blank()
 
 ```
@@ -952,15 +1096,17 @@ responses %>%
 
 
 ```{r}
-tmod1 <- lm(morality~populist_attitudes_index_4dim,family="binomial" ,data=responses %>% filter(entity=="junior civil servants") %>% labelled::remove_labels())
+tmod1 <- glm(morality~populist_attitudes_index_4dim,family="binomial" ,data=responses %>% filter(entity=="junior civil servants") %>% labelled::remove_labels())
 tmod2 <- tmod1 %>% update(.~.+
                             female +
                 age_group+
                 income+
                 education+
                 right_left_ideology+
+                  affective_polarization+
                 external_efficecy+
-                subjective_social_economic_status)
+                subjective_social_economic_status+
+                  public_sector_employee_current)
 
 tmod3 <- tmod1 %>% update(ability~.)
 tmod4 <- tmod2 %>% update(ability~.)
@@ -1013,8 +1159,10 @@ tmod2 <- tmod1 %>% update(.~.+
                 income+
                 education+
                 right_left_ideology+
+                  affective_polarization+
                 external_efficecy+
-                subjective_social_economic_status)
+                subjective_social_economic_status+
+                  public_sector_employee_current)
 
 sjPlot::tab_model(tmod1,tmod2,
                   show.est = F,
@@ -1031,8 +1179,10 @@ tmod2 <- tmod1 %>% update(.~.+
                 income+
                 education+
                 right_left_ideology+
+                  affective_polarization+
                 external_efficecy+
-                subjective_social_economic_status)
+                subjective_social_economic_status+
+                  public_sector_employee_current)
 
 sjPlot::tab_model(tmod1,tmod2,
                   show.est = F,
@@ -1051,7 +1201,8 @@ tmod2 <- tmod1 %>% update(.~.+
                 education+
                 right_left_ideology+
                 external_efficecy+
-                subjective_social_economic_status)
+                subjective_social_economic_status+
+                  public_sector_employee_current)
 
 sjPlot::tab_model(tmod1,tmod2,
                   show.est = F,
@@ -1067,37 +1218,39 @@ sjPlot::tab_model(tmod1,tmod2,
 responses %>% 
   filter(entity=="senior civil servants") %>% 
   ggplot(aes(x=populist_attitudes_index_4dim,y=morality))+
-  geom_point()+
-  geom_smooth(method="lm")+
+  geom_point(alpha=0.2)+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
   theme_blank()
 
 responses %>% 
   filter(entity=="senior civil servants") %>% 
   ggplot(aes(x=populist_attitudes_index_4dim,y=ability))+
-  geom_point()+
-  geom_smooth(method="lm")+
+  geom_point(alpha=0.2)+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
   theme_blank()
 
 responses %>% 
   filter(entity=="senior civil servants") %>% 
   ggplot(aes(x=populist_attitudes_index_4dim,y=assertiveness))+
-  geom_point()+
-  geom_smooth(method="lm")+
+  geom_point(alpha=0.2)+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
   theme_blank()
 ```
 
 
 
 ```{r}
-tmod1 <- lm(morality~populist_attitudes_index_4dim,family="binomial",data=responses %>% filter(entity=="senior civil servants") %>% labelled::remove_labels())
+tmod1 <- glm(morality~populist_attitudes_index_4dim,family="binomial",data=responses %>% filter(entity=="senior civil servants") %>% labelled::remove_labels())
 tmod2 <- tmod1 %>% update(.~.+
                             female +
                 age_group+
                 income+
                 education+
                 right_left_ideology+
+                  affective_polarization+
                 external_efficecy+
-                subjective_social_economic_status)
+                subjective_social_economic_status+
+                  public_sector_employee_current)
 
 tmod3 <- tmod1 %>% update(ability~.)
 tmod4 <- tmod2 %>% update(ability~.)
@@ -1111,6 +1264,34 @@ sjPlot::tab_model(tmod1,tmod2,
                   tmod5,tmod6,
                   collapse.ci = T)
 ```
+
+
+First response
+
+
+```{r}
+responses %>% 
+  filter(entity=="senior civil servants",response_order==1) %>% 
+  ggplot(aes(x=populist_attitudes_index_4dim,y=morality))+
+  geom_point(alpha=0.2)+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
+  theme_blank()
+
+responses %>% 
+  filter(entity=="senior civil servants",response_order==1) %>% 
+  ggplot(aes(x=populist_attitudes_index_4dim,y=ability))+
+  geom_point(alpha=0.2)+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
+  theme_blank()
+
+responses %>% 
+  filter(entity=="senior civil servants",response_order==1) %>% 
+  ggplot(aes(x=populist_attitudes_index_4dim,y=assertiveness))+
+  geom_point(alpha=0.2)+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
+  theme_blank()
+```
+
 
 ```{r}
 responses %>% 
@@ -1140,6 +1321,24 @@ responses %>%
 
 ```
 
+```{r}
+tmod1 <- lm(response_direction~populist_attitudes_index_4dim,data=responses %>% filter(entity=="senior civil servants",morality==1) %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+
+                            female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                  affective_polarization+
+                external_efficecy+
+                subjective_social_economic_status+
+                  public_sector_employee_current)
+
+sjPlot::tab_model(tmod1,tmod2,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
 
 ```{r}
 tmod1 <- lm(response_direction~populist_attitudes_index_4dim,data=responses %>% filter(entity=="senior civil servants",ability==1) %>% labelled::remove_labels())
@@ -1149,8 +1348,10 @@ tmod2 <- tmod1 %>% update(.~.+
                 income+
                 education+
                 right_left_ideology+
+                  affective_polarization+
                 external_efficecy+
-                subjective_social_economic_status)
+                subjective_social_economic_status+
+                  public_sector_employee_current)
 
 sjPlot::tab_model(tmod1,tmod2,
                   show.est = F,
@@ -1168,12 +1369,141 @@ tmod2 <- tmod1 %>% update(.~.+
                 income+
                 education+
                 right_left_ideology+
+                  affective_polarization+
                 external_efficecy+
-                subjective_social_economic_status)
+                subjective_social_economic_status+
+                  public_sector_employee_current)
 
 sjPlot::tab_model(tmod1,tmod2,
                   show.est = F,
                   show.std = T,
                   collapse.ci = T)
 ```
+
+
+## All
+
+
+```{r}
+responses %>% 
+  ggplot(aes(x=populist_attitudes_index_4dim,y=morality))+
+  geom_point(alpha=0.2)+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
+  facet_wrap(vars(entity))+
+  theme_blank()
+
+responses %>% 
+  ggplot(aes(x=populist_attitudes_index_4dim,y=ability))+
+  geom_point(alpha=0.2)+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
+  facet_wrap(vars(entity))+
+  theme_blank()
+
+responses %>% 
+  ggplot(aes(x=populist_attitudes_index_4dim,y=assertiveness))+
+  geom_point(alpha=0.2)+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
+  facet_wrap(vars(entity))+
+  theme_blank()
+```
+
+```{r}
+tmod1 <- lme4::glmer(morality~populist_attitudes_index_4dim + entity + (1|pid.x),family="binomial",data=responses  %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+
+                            female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                  affective_polarization+
+                external_efficecy+
+                subjective_social_economic_status+
+                  public_sector_employee_current)
+
+tmod3 <- tmod1 %>% update(ability~.)
+tmod4 <- tmod2 %>% update(ability~.)
+
+tmod5 <- tmod1 %>% update(assertiveness~.)
+tmod6 <- tmod2 %>% update(assertiveness~.)
+
+
+sjPlot::tab_model(tmod1,tmod2,
+                  tmod3,tmod4,
+                  tmod5,tmod6,
+                  collapse.ci = T)
+```
+
+```{r}
+tmod1 <- lme4::glmer(morality~populist_attitudes_index_4dim*entity + (1|pid.x),family="binomial",data=responses  %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+
+                            female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                  affective_polarization+
+                external_efficecy+
+                subjective_social_economic_status+
+                  public_sector_employee_current)
+
+tmod3 <- tmod1 %>% update(ability~.)
+tmod4 <- tmod2 %>% update(ability~.)
+
+tmod5 <- tmod1 %>% update(assertiveness~.)
+tmod6 <- tmod2 %>% update(assertiveness~.)
+
+
+sjPlot::tab_model(tmod2,
+                  tmod4,
+                  tmod6,
+                  collapse.ci = T)
+```
+
+
+
+
+```{r}
+tmod1 <- lme4::lmer(response_direction~populist_attitudes_index_4dim + entity + (1|pid.x),data=responses  %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+
+                            female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                  affective_polarization+
+                external_efficecy+
+                subjective_social_economic_status+
+                  public_sector_employee_current)
+tmod3 <- tmod2 %>% update(.~.+populist_attitudes_index_4dim*entity)
+
+
+sjPlot::tab_model(tmod1,tmod2,tmod3,
+                  collapse.ci = T)
+```
+
+```{r}
+responses %>% 
+  ggplot(aes(x=affective_polarization,y=response_direction))+
+  geom_jitter(alpha=0.2)+
+  geom_smooth()+
+  facet_wrap(vars(entity))+
+  theme_blank()
+
+
+```
+
+
+
+```{r}
+responses %>% 
+  ggplot(aes(x=factor(right_left_ideology),y=response_direction))+
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+  facet_wrap(vars(entity))+
+  theme_blank()
+
+
+```
+
+
 
