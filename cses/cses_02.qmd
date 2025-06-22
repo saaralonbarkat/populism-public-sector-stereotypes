@@ -31,6 +31,7 @@ library(broom)
 library(lme4)
 library(ggpubr)
 library(ggeffects)
+library(lavaan)
 Sys.setlocale("LC_ALL","Herbrew")
 ```
 
@@ -130,6 +131,40 @@ cses_isr <- cses_raw %>%
   filter(pop_group == 1) # jewish
 ```
 
+# **The Wording of the Questions (in Hebrew)**
+
+* **Q03 / e3003 / understands_politics**
+
+אתה מרגיש שאתה מבין את הנושאים הפוליטיים החשובים ביותר של המדינה
+
+* **Q04a / e3004_1 / compromise_betrayal**
+
+מה שאנשים מכנים "פשרה" בפוליטיקה זה בעצם בגידה בעקרונות
+
+* **Q04b / e3004_2 / dont_care_ppl**
+
+לרוב הפוליטיקאים לא אכפת מהעם
+
+* **Q04c / e3004_3 / trustworthy**
+
+אפשר לתת אמון ברוב הפוליטיקאים
+
+* **Q04d / e3004_4 / main_problem**
+
+פוליטיקאים הם הבעיה העיקרית של ישראל
+
+* **Q04e / e3004_5 / strong_leader**
+
+מנהיג חזק הוא טוב לישראל, גם אם אותו מנהיג מכופף את הכללים על מנת להשיג תוצאות
+
+* **Q04f / e3004_6 / decision_by_ppl**
+
+העם הוא זה שצריך לקבל את ההחלטות המדיניות החשובות ביותר שלנו ולא הפוליטיקאים
+
+* **Q04g / e3004_7 / care_tycoons**
+
+לרוב הפוליטיקאים אכפת רק מהאינטרסים של בעלי ההון והעוצמה במדינה
+
 # **Descriptive Statistics**
 
 ```{r}
@@ -149,5 +184,79 @@ cses_isr %>%
                    corr.method = "pearson",
                    p.numeric = T,
                    na.deletion = "listwise")
+```
+
+# **Cronbach's Alpha**
+
+## **All variables**
+
+```{r}
+cses_isr %>%
+  dplyr::select(understands_politics, compromise_betrayal, dont_care_ppl, trustworthy, main_problem, strong_leader, decision_by_ppl, care_tycoons) %>%
+  sjPlot::tab_itemscale()
+```
+
+## **Anti-Elitism**
+
+```{r}
+cses_isr %>%
+  dplyr::select(dont_care_ppl, trustworthy, main_problem, care_tycoons) %>%
+  sjPlot::tab_itemscale()
+```
+
+# **CFA**
+
+## **All variables**
+
+```{r}
+cfa_m <- '
+one_factor = ~ understands_politics + compromise_betrayal + dont_care_ppl + trustworthy + main_problem + strong_leader + decision_by_ppl + care_tycoons '
+
+fit_cfa_m <- lavaan::cfa(cfa_m,
+                         data = cses_isr,
+                         se = "robust",
+                         std.lv = T)
+
+summary(fit_cfa_m, fit.measures = T, standardize = T)
+```
+
+## **Anti-Elitism**
+
+```{r}
+cfa_m <- '
+anti_elitism = ~ dont_care_ppl + trustworthy + main_problem + care_tycoons '
+
+fit_cfa_m <- lavaan::cfa(cfa_m,
+                         data = cses_isr,
+                         se = "robust",
+                         std.lv = T)
+
+summary(fit_cfa_m, fit.measures = T, standardize = T)
+```
+
+
+```{r}
+cses_isr <- cses_isr %>%
+  mutate(anti_elitism = (((dont_care_ppl + trustworthy + main_problem + care_tycoons) / 4-1) / 4))
+```
+
+## **Regression Tables**
+
+```{r}
+# anti_elitism
+m_1 <- lm(anti_elitism ~
+            gender + age + as.factor(education) + as.factor(household_income) + left_right_scale,
+          data = cses_isr %>% labelled::remove_labels())
+
+sjPlot::tab_model(m_1,
+                  p.style = "numeric_stars",
+                  collapse.se = T,
+                  show.ci = F,
+                  show.se = T,
+                  emph.p = F,
+                  show.aic = T,
+                  show.loglik = T,
+                  digits = 3,
+                  dv.labels = c("(1) anti_elitism"))
 ```
 
