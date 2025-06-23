@@ -127,7 +127,20 @@ cses_isr <- cses_raw %>%
                                    `95` = 99,
                                    `97` = 99,
                                    `98` = 99),
-         left_right_scale = na_if(left_right_scale, 99)) %>%
+         left_right_scale = na_if(left_right_scale, 99),
+         voting = recode(e3013_lh_pl, # q12lh-b
+                         `376001` = "Likud",
+                         `376002` = "Blue & White",
+                         `376003` = "Joint List",
+                         `376004` = "Shas",
+                         `376005` = "UTJ",
+                         `376006` = "Labor-Gesher-Meretz",
+                         `376007` = "Yisrael Beiteinu",
+                         `376008` = "Yamina",
+                         `376009` = "Otzma Yehudit",
+                         .default = "unknown"),
+         voting = na_if(voting, "unknown"),
+         voting = as.factor(voting)) %>%
   filter(pop_group == 1) # jewish
 ```
 
@@ -135,35 +148,35 @@ cses_isr <- cses_raw %>%
 
 * **Q03 / e3003 / understands_politics**
 
-אתה מרגיש שאתה מבין את הנושאים הפוליטיים החשובים ביותר של המדינה
+אתה מרגיש שאתה מבין את הנושאים הפוליטיים החשובים ביותר של המדינה (1 - מאוד מסכים; 5 - מאוד לא מסכים)
 
 * **Q04a / e3004_1 / compromise_betrayal**
 
-מה שאנשים מכנים "פשרה" בפוליטיקה זה בעצם בגידה בעקרונות
+מה שאנשים מכנים "פשרה" בפוליטיקה זה בעצם בגידה בעקרונות (1 - מאוד מסכים; 5 - מאוד לא מסכים)
 
 * **Q04b / e3004_2 / dont_care_ppl**
 
-לרוב הפוליטיקאים לא אכפת מהעם
+לרוב הפוליטיקאים לא אכפת מהעם (1 - מאוד מסכים; 5 - מאוד לא מסכים)
 
 * **Q04c / e3004_3 / trustworthy**
 
-אפשר לתת אמון ברוב הפוליטיקאים
+אפשר לתת אמון ברוב הפוליטיקאים (1 - מאוד מסכים; 5 - מאוד לא מסכים)
 
 * **Q04d / e3004_4 / main_problem**
 
-פוליטיקאים הם הבעיה העיקרית של ישראל
+פוליטיקאים הם הבעיה העיקרית של ישראל (1 - מאוד מסכים; 5 - מאוד לא מסכים)
 
 * **Q04e / e3004_5 / strong_leader**
 
-מנהיג חזק הוא טוב לישראל, גם אם אותו מנהיג מכופף את הכללים על מנת להשיג תוצאות
+מנהיג חזק הוא טוב לישראל, גם אם אותו מנהיג מכופף את הכללים על מנת להשיג תוצאות (1 - מאוד מסכים; 5 - מאוד לא מסכים)
 
 * **Q04f / e3004_6 / decision_by_ppl**
 
-העם הוא זה שצריך לקבל את ההחלטות המדיניות החשובות ביותר שלנו ולא הפוליטיקאים
+העם הוא זה שצריך לקבל את ההחלטות המדיניות החשובות ביותר שלנו ולא הפוליטיקאים (1 - מאוד מסכים; 5 - מאוד לא מסכים)
 
 * **Q04g / e3004_7 / care_tycoons**
 
-לרוב הפוליטיקאים אכפת רק מהאינטרסים של בעלי ההון והעוצמה במדינה
+לרוב הפוליטיקאים אכפת רק מהאינטרסים של בעלי ההון והעוצמה במדינה (1 - מאוד מסכים; 5 - מאוד לא מסכים)
 
 # **Descriptive Statistics**
 
@@ -192,7 +205,7 @@ cses_isr %>%
 
 ```{r}
 cses_isr %>%
-  dplyr::select(understands_politics, compromise_betrayal, dont_care_ppl, trustworthy, main_problem, strong_leader, decision_by_ppl, care_tycoons) %>%
+  dplyr::select(compromise_betrayal, dont_care_ppl, trustworthy, main_problem, decision_by_ppl, care_tycoons) %>%
   sjPlot::tab_itemscale()
 ```
 
@@ -206,11 +219,11 @@ cses_isr %>%
 
 # **CFA**
 
-## **All variables**
+## **All variables (one factor)**
 
 ```{r}
 cfa_m <- '
-one_factor = ~ understands_politics + compromise_betrayal + dont_care_ppl + trustworthy + main_problem + strong_leader + decision_by_ppl + care_tycoons '
+one_factor = ~ compromise_betrayal + dont_care_ppl + trustworthy + main_problem + decision_by_ppl + care_tycoons '
 
 fit_cfa_m <- lavaan::cfa(cfa_m,
                          data = cses_isr,
@@ -220,11 +233,13 @@ fit_cfa_m <- lavaan::cfa(cfa_m,
 summary(fit_cfa_m, fit.measures = T, standardize = T)
 ```
 
-## **Anti-Elitism**
+## **Three factor (Anti-Elitism, Popular Sovereignty, Manichean)**
 
 ```{r}
 cfa_m <- '
-anti_elitism = ~ dont_care_ppl + trustworthy + main_problem + care_tycoons '
+anti_elitism = ~ dont_care_ppl + trustworthy + main_problem + care_tycoons
+popular_sovereignty = ~ decision_by_ppl
+manichean = ~ compromise_betrayal '
 
 fit_cfa_m <- lavaan::cfa(cfa_m,
                          data = cses_isr,
@@ -234,22 +249,31 @@ fit_cfa_m <- lavaan::cfa(cfa_m,
 summary(fit_cfa_m, fit.measures = T, standardize = T)
 ```
 
+# **Regression Tables**
 
 ```{r}
 cses_isr <- cses_isr %>%
-  mutate(anti_elitism = (((dont_care_ppl + trustworthy + main_problem + care_tycoons) / 4-1) / 4))
+  mutate(anti_elitism = (((dont_care_ppl + trustworthy + main_problem + care_tycoons) / 4-1) / 4),
+         popular_sovereignty = ((decision_by_ppl - 1) / 4),
+         manichean = ((compromise_betrayal - 1) / 4)) %>%
+  mutate(populist_attitudes_idx_3dim = ((anti_elitism + popular_sovereignty + manichean) / 3))
 ```
 
-## **Regression Tables**
-
 ```{r}
-# anti_elitism
 m_1 <- lm(anti_elitism ~
             gender + age + as.factor(education) + as.factor(household_income) + left_right_scale,
           data = cses_isr %>% labelled::remove_labels())
 
-sjPlot::tab_model(m_1,
+m_2 <- m_1 %>% update(popular_sovereignty ~ .)
+
+m_3 <- m_1 %>% update(manichean ~ .)
+
+m_4 <- m_1 %>% update(populist_attitudes_idx_3dim ~ .)
+
+sjPlot::tab_model(m_1, m_2, m_3, m_4,
                   p.style = "numeric_stars",
+                  show.est = F,
+                  show.std = T,
                   collapse.se = T,
                   show.ci = F,
                   show.se = T,
@@ -257,6 +281,49 @@ sjPlot::tab_model(m_1,
                   show.aic = T,
                   show.loglik = T,
                   digits = 3,
-                  dv.labels = c("(1) anti_elitism"))
+                  dv.labels = c("(1) Anti-Elitism",
+                                "(2) Popular Sovereignty",
+                                "(3) Manichean",
+                                "(4) Populist Attitudes Index 3-dim"))
+```
+
+# **Plots**
+
+## **Anti-Elitism and Voting**
+
+```{r}
+cses_isr %>%
+  group_by(voting) %>%
+  mutate(mean_pop = mean(anti_elitism, na.rm = T)) %>%
+  ungroup() %>%
+  mutate(voting = fct_reorder(voting, mean_pop)) %>%
+  ggplot(aes(x = voting, y = anti_elitism)) +
+  geom_point(alpha = 0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(x = NULL,
+       y = "Anti-Elitism",
+       title = "Populist Attitudes by Voting") +
+  theme_minimal()
+```
+
+## **Populist Attitudes Index (3-dim) and Voting**
+
+```{r}
+cses_isr %>%
+  group_by(voting) %>%
+  mutate(mean_pop = mean(populist_attitudes_idx_3dim, na.rm = T)) %>%
+  ungroup() %>%
+  mutate(voting = fct_reorder(voting, mean_pop)) %>%
+  ggplot(aes(x = voting, y = populist_attitudes_idx_3dim)) +
+  geom_point(alpha = 0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(x = NULL,
+       y = "Populist Attitudes Index (3-dim)",
+       title = "Populist Attitudes by Voting") +
+  theme_minimal()
 ```
 
