@@ -55,11 +55,21 @@ cses_isr <- cses_raw %>%
                                       `8` = 99,
                                       `9` = 99),
          compromise_betrayal = na_if(compromise_betrayal, 99),
+         compromise_betrayal_reversed = recode(compromise_betrayal,
+                                               `5` = 1,
+                                               `4` = 2,
+                                               `2` = 4,
+                                               `1` = 5),
          dont_care_ppl = recode(e3004_2, # q04b
                                 `7` = 99,
                                 `8` = 99,
                                 `9` = 99),
          dont_care_ppl = na_if(dont_care_ppl, 99),
+         dont_care_ppl_reversed = recode(dont_care_ppl,
+                                         `5` = 1,
+                                         `4` = 2,
+                                         `2` = 4,
+                                         `1` = 5),
          trustworthy = recode(e3004_3, # q04c
                               `7` = 99,
                               `8` = 99,
@@ -70,6 +80,11 @@ cses_isr <- cses_raw %>%
                                `8` = 99,
                                `9` = 99),
          main_problem = na_if(main_problem, 99),
+         main_problem_reversed = recode(main_problem,
+                                        `5` = 1,
+                                        `4` = 2,
+                                        `2` = 4,
+                                        `1` = 5),
          strong_leader = recode(e3004_5, # q05e
                                 `7` = 99,
                                 `8` = 99,
@@ -80,11 +95,21 @@ cses_isr <- cses_raw %>%
                                   `8` = 99,
                                   `9` = 99),
          decision_by_ppl = na_if(decision_by_ppl, 99),
+         decision_by_ppl_reversed = recode(decision_by_ppl,
+                                           `5` = 1,
+                                           `4` = 2,
+                                           `2` = 4,
+                                           `1` = 5),
          care_tycoons = recode(e3004_7, # q04g
                                `7` = 99,
                                `8` = 99,
                                `9` = 99),
          care_tycoons = na_if(care_tycoons, 99),
+         care_tycoons_reversed = recode(care_tycoons,
+                                        `5` = 1,
+                                        `4` = 2,
+                                        `2` = 4,
+                                        `1` = 5),
          gender = recode(e2002, # e2002
                          `1` = 0, # male
                          `2` = 1, # female
@@ -183,7 +208,7 @@ cses_isr <- cses_raw %>%
 ```{r}
 cses_isr %>%
   mutate(household_income = as.factor(household_income)) %>%
-  dplyr::select(understands_politics, compromise_betrayal, dont_care_ppl, trustworthy, main_problem, strong_leader, decision_by_ppl, care_tycoons, gender, age, education, household_income, religion, pop_group, left_right_scale) %>%
+  dplyr::select(understands_politics, compromise_betrayal_reversed, dont_care_ppl_reversed, trustworthy, main_problem_reversed, strong_leader, decision_by_ppl_reversed, care_tycoons_reversed, gender, age, education, household_income, religion, pop_group, left_right_scale) %>%
   gtsummary::tbl_summary(statistic = list(c(age, left_right_scale) ~ "{mean} ({sd})")) %>%
   bold_labels()
 ```
@@ -192,7 +217,7 @@ cses_isr %>%
 
 ```{r}
 cses_isr %>%
-  dplyr::select(understands_politics, compromise_betrayal, dont_care_ppl, trustworthy, main_problem, strong_leader, decision_by_ppl, care_tycoons, gender, age, education, household_income, left_right_scale) %>%
+  dplyr::select(understands_politics, compromise_betrayal_reversed, dont_care_ppl_reversed, trustworthy, main_problem_reversed, strong_leader, decision_by_ppl_reversed, care_tycoons_reversed, gender, age, education, household_income, left_right_scale) %>%
   sjPlot::tab_corr(triangle = "lower",
                    corr.method = "pearson",
                    p.numeric = T,
@@ -205,7 +230,7 @@ cses_isr %>%
 
 ```{r}
 cses_isr %>%
-  dplyr::select(compromise_betrayal, dont_care_ppl, trustworthy, main_problem, decision_by_ppl, care_tycoons) %>%
+  dplyr::select(compromise_betrayal_reversed, dont_care_ppl_reversed, trustworthy, main_problem_reversed, decision_by_ppl_reversed, care_tycoons_reversed) %>%
   sjPlot::tab_itemscale()
 ```
 
@@ -213,7 +238,7 @@ cses_isr %>%
 
 ```{r}
 cses_isr %>%
-  dplyr::select(dont_care_ppl, trustworthy, main_problem, care_tycoons) %>%
+  dplyr::select(dont_care_ppl_reversed, trustworthy, main_problem_reversed, care_tycoons_reversed) %>%
   sjPlot::tab_itemscale()
 ```
 
@@ -223,7 +248,7 @@ cses_isr %>%
 
 ```{r}
 cfa_m <- '
-one_factor = ~ compromise_betrayal + dont_care_ppl + trustworthy + main_problem + decision_by_ppl + care_tycoons '
+one_factor = ~ compromise_betrayal_reversed + dont_care_ppl_reversed + trustworthy + main_problem_reversed + decision_by_ppl_reversed + care_tycoons_reversed '
 
 fit_cfa_m <- lavaan::cfa(cfa_m,
                          data = cses_isr,
@@ -237,9 +262,9 @@ summary(fit_cfa_m, fit.measures = T, standardize = T)
 
 ```{r}
 cfa_m <- '
-anti_elitism = ~ dont_care_ppl + trustworthy + main_problem + care_tycoons
-popular_sovereignty = ~ decision_by_ppl
-manichean = ~ compromise_betrayal '
+anti_elitism = ~ dont_care_ppl_reversed + trustworthy + main_problem_reversed + care_tycoons_reversed
+popular_sovereignty = ~ decision_by_ppl_reversed
+manichean = ~ compromise_betrayal_reversed '
 
 fit_cfa_m <- lavaan::cfa(cfa_m,
                          data = cses_isr,
@@ -253,9 +278,9 @@ summary(fit_cfa_m, fit.measures = T, standardize = T)
 
 ```{r}
 cses_isr <- cses_isr %>%
-  mutate(anti_elitism = (((dont_care_ppl + trustworthy + main_problem + care_tycoons) / 4-1) / 4),
-         popular_sovereignty = ((decision_by_ppl - 1) / 4),
-         manichean = ((compromise_betrayal - 1) / 4)) %>%
+  mutate(anti_elitism = (((dont_care_ppl_reversed + trustworthy + main_problem_reversed + care_tycoons_reversed) / 4-1) / 4),
+         popular_sovereignty = ((decision_by_ppl_reversed - 1) / 4),
+         manichean = ((compromise_betrayal_reversed - 1) / 4)) %>%
   mutate(populist_attitudes_idx_3dim = ((anti_elitism + popular_sovereignty + manichean) / 3))
 ```
 
