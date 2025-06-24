@@ -135,7 +135,9 @@ cses_isr <- cses_raw %>%
                                    `99999997` = 99,
                                    `99999998` = 99,
                                    `99999999` = 99), 
-         household_income = na_if(household_income, 99),
+         household_income = as.factor(household_income),
+         household_income = recode(household_income,
+                                   `99` = "unknown"),
          religion = recode(e2013, # d10
                            `1101` = "Christian",
                            `1200` = "Christian",
@@ -217,7 +219,7 @@ cses_isr %>%
 
 ```{r}
 cses_isr %>%
-  dplyr::select(understands_politics, compromise_betrayal_reversed, dont_care_ppl_reversed, trustworthy, main_problem_reversed, strong_leader, decision_by_ppl_reversed, care_tycoons_reversed, gender, age, education, household_income, left_right_scale) %>%
+  dplyr::select(understands_politics, compromise_betrayal_reversed, dont_care_ppl_reversed, trustworthy, main_problem_reversed, strong_leader, decision_by_ppl_reversed, care_tycoons_reversed, gender, age, education, left_right_scale) %>%
   sjPlot::tab_corr(triangle = "lower",
                    corr.method = "pearson",
                    p.numeric = T,
@@ -286,7 +288,7 @@ cses_isr <- cses_isr %>%
 
 ```{r}
 m_1 <- lm(anti_elitism ~
-            gender + age + as.factor(education) + as.factor(household_income) + left_right_scale,
+            gender + age + as.factor(education) + left_right_scale,
           data = cses_isr %>% labelled::remove_labels())
 
 m_2 <- m_1 %>% update(popular_sovereignty ~ .)
@@ -352,3 +354,26 @@ coord_flip() +
   theme_minimal()
 ```
 
+## **Histogram: Anti-Elitism**
+
+```{r}
+hist(cses_isr $ anti_elitism)
+```
+
+## **Histogram: Popular Sovereignty**
+
+```{r}
+hist(cses_isr $ popular_sovereignty)
+```
+
+## **Histogram: Manichean**
+
+```{r}
+hist(cses_isr $ manichean)
+```
+
+## **Histogram: Populist Attitudes Index 3-dim**
+
+```{r}
+hist(cses_isr $ populist_attitudes_idx_3dim)
+```
