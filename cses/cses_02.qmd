@@ -167,7 +167,13 @@ cses_isr <- cses_raw %>%
                          `376009` = "Otzma Yehudit",
                          .default = "unknown"),
          voting = na_if(voting, "unknown"),
-         voting = as.factor(voting)) %>%
+         voting = as.factor(voting),
+         gov_performance = recode(e3009,
+                                  `6` = 99,
+                                  `7` = 99,
+                                  `8` = 99,
+                                  `9` = 99),
+         gov_performance = na_if(gov_performance, 99)) %>%
   filter(pop_group == 1) # jewish
 ```
 
@@ -210,7 +216,7 @@ cses_isr <- cses_raw %>%
 ```{r}
 cses_isr %>%
   mutate(household_income = as.factor(household_income)) %>%
-  dplyr::select(understands_politics, compromise_betrayal_reversed, dont_care_ppl_reversed, trustworthy, main_problem_reversed, strong_leader, decision_by_ppl_reversed, care_tycoons_reversed, gender, age, education, household_income, religion, pop_group, left_right_scale) %>%
+  dplyr::select(understands_politics, compromise_betrayal_reversed, dont_care_ppl_reversed, trustworthy, main_problem_reversed, strong_leader, decision_by_ppl_reversed, care_tycoons_reversed, gov_performance, gender, age, education, household_income, religion, pop_group, left_right_scale) %>%
   gtsummary::tbl_summary(statistic = list(c(age, left_right_scale) ~ "{mean} ({sd})")) %>%
   bold_labels()
 ```
@@ -219,7 +225,7 @@ cses_isr %>%
 
 ```{r}
 cses_isr %>%
-  dplyr::select(understands_politics, compromise_betrayal_reversed, dont_care_ppl_reversed, trustworthy, main_problem_reversed, strong_leader, decision_by_ppl_reversed, care_tycoons_reversed, gender, age, education, left_right_scale) %>%
+  dplyr::select(understands_politics, compromise_betrayal_reversed, dont_care_ppl_reversed, trustworthy, main_problem_reversed, strong_leader, decision_by_ppl_reversed, care_tycoons_reversed, gov_performance, gender, age, education, left_right_scale) %>%
   sjPlot::tab_corr(triangle = "lower",
                    corr.method = "pearson",
                    p.numeric = T,

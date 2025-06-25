@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Lior Shvarts">
-<meta name="dcterms.date" content="2025-06-24">
+<meta name="dcterms.date" content="2025-06-25">
 
 <title>cses_02</title>
 <style>
@@ -3075,7 +3075,7 @@ vertical-align: -.125em;
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">June 24, 2025</p>
+      <p class="date">June 25, 2025</p>
     </div>
   </div>
   
@@ -3248,8 +3248,14 @@ vertical-align: -.125em;
 <span id="cb4-123"><a href="#cb4-123" aria-hidden="true" tabindex="-1"></a>                         <span class="st">`</span><span class="at">376009</span><span class="st">`</span> <span class="ot">=</span> <span class="st">&quot;Otzma Yehudit&quot;</span>,</span>
 <span id="cb4-124"><a href="#cb4-124" aria-hidden="true" tabindex="-1"></a>                         <span class="at">.default =</span> <span class="st">&quot;unknown&quot;</span>),</span>
 <span id="cb4-125"><a href="#cb4-125" aria-hidden="true" tabindex="-1"></a>         <span class="at">voting =</span> <span class="fu">na_if</span>(voting, <span class="st">&quot;unknown&quot;</span>),</span>
-<span id="cb4-126"><a href="#cb4-126" aria-hidden="true" tabindex="-1"></a>         <span class="at">voting =</span> <span class="fu">as.factor</span>(voting)) <span class="sc">%&gt;%</span></span>
-<span id="cb4-127"><a href="#cb4-127" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(pop_group <span class="sc">==</span> <span class="dv">1</span>) <span class="co"># jewish</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-126"><a href="#cb4-126" aria-hidden="true" tabindex="-1"></a>         <span class="at">voting =</span> <span class="fu">as.factor</span>(voting),</span>
+<span id="cb4-127"><a href="#cb4-127" aria-hidden="true" tabindex="-1"></a>         <span class="at">gov_performance =</span> <span class="fu">recode</span>(e3009,</span>
+<span id="cb4-128"><a href="#cb4-128" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">`</span><span class="at">6</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">99</span>,</span>
+<span id="cb4-129"><a href="#cb4-129" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">`</span><span class="at">7</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">99</span>,</span>
+<span id="cb4-130"><a href="#cb4-130" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">`</span><span class="at">8</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">99</span>,</span>
+<span id="cb4-131"><a href="#cb4-131" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">`</span><span class="at">9</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">99</span>),</span>
+<span id="cb4-132"><a href="#cb4-132" aria-hidden="true" tabindex="-1"></a>         <span class="at">gov_performance =</span> <span class="fu">na_if</span>(gov_performance, <span class="dv">99</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb4-133"><a href="#cb4-133" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(pop_group <span class="sc">==</span> <span class="dv">1</span>) <span class="co"># jewish</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <section id="the-wording-of-the-questions-in-hebrew" class="level1">
@@ -3294,26 +3300,26 @@ vertical-align: -.125em;
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>cses_isr <span class="sc">%&gt;%</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">household_income =</span> <span class="fu">as.factor</span>(household_income)) <span class="sc">%&gt;%</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(understands_politics, compromise_betrayal_reversed, dont_care_ppl_reversed, trustworthy, main_problem_reversed, strong_leader, decision_by_ppl_reversed, care_tycoons_reversed, gender, age, education, household_income, religion, pop_group, left_right_scale) <span class="sc">%&gt;%</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(understands_politics, compromise_betrayal_reversed, dont_care_ppl_reversed, trustworthy, main_problem_reversed, strong_leader, decision_by_ppl_reversed, care_tycoons_reversed, gov_performance, gender, age, education, household_income, religion, pop_group, left_right_scale) <span class="sc">%&gt;%</span></span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  gtsummary<span class="sc">::</span><span class="fu">tbl_summary</span>(<span class="at">statistic =</span> <span class="fu">list</span>(<span class="fu">c</span>(age, left_right_scale) <span class="sc">~</span> <span class="st">&quot;{mean} ({sd})&quot;</span>)) <span class="sc">%&gt;%</span></span>
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bold_labels</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 
-<div id="krmihrremg" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#krmihrremg table {
+<div id="yhixctjnus" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#yhixctjnus table {
 font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 -webkit-font-smoothing: antialiased;
 -moz-osx-font-smoothing: grayscale;
 }
-#krmihrremg thead, #krmihrremg tbody, #krmihrremg tfoot, #krmihrremg tr, #krmihrremg td, #krmihrremg th {
+#yhixctjnus thead, #yhixctjnus tbody, #yhixctjnus tfoot, #yhixctjnus tr, #yhixctjnus td, #yhixctjnus th {
 border-style: none;
 }
-#krmihrremg p {
+#yhixctjnus p {
 margin: 0;
 padding: 0;
 }
-#krmihrremg .gt_table {
+#yhixctjnus .gt_table {
 display: table;
 border-collapse: collapse;
 line-height: normal;
@@ -3338,11 +3344,11 @@ border-left-style: none;
 border-left-width: 2px;
 border-left-color: #D3D3D3;
 }
-#krmihrremg .gt_caption {
+#yhixctjnus .gt_caption {
 padding-top: 4px;
 padding-bottom: 4px;
 }
-#krmihrremg .gt_title {
+#yhixctjnus .gt_title {
 color: #333333;
 font-size: 125%;
 font-weight: initial;
@@ -3353,7 +3359,7 @@ padding-right: 5px;
 border-bottom-color: #FFFFFF;
 border-bottom-width: 0;
 }
-#krmihrremg .gt_subtitle {
+#yhixctjnus .gt_subtitle {
 color: #333333;
 font-size: 85%;
 font-weight: initial;
@@ -3364,7 +3370,7 @@ padding-right: 5px;
 border-top-color: #FFFFFF;
 border-top-width: 0;
 }
-#krmihrremg .gt_heading {
+#yhixctjnus .gt_heading {
 background-color: #FFFFFF;
 text-align: center;
 border-bottom-color: #FFFFFF;
@@ -3375,12 +3381,12 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#krmihrremg .gt_bottom_border {
+#yhixctjnus .gt_bottom_border {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#krmihrremg .gt_col_headings {
+#yhixctjnus .gt_col_headings {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #D3D3D3;
@@ -3394,7 +3400,7 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#krmihrremg .gt_col_heading {
+#yhixctjnus .gt_col_heading {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -3413,7 +3419,7 @@ padding-left: 5px;
 padding-right: 5px;
 overflow-x: hidden;
 }
-#krmihrremg .gt_column_spanner_outer {
+#yhixctjnus .gt_column_spanner_outer {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -3424,13 +3430,13 @@ padding-bottom: 0;
 padding-left: 4px;
 padding-right: 4px;
 }
-#krmihrremg .gt_column_spanner_outer:first-child {
+#yhixctjnus .gt_column_spanner_outer:first-child {
 padding-left: 0;
 }
-#krmihrremg .gt_column_spanner_outer:last-child {
+#yhixctjnus .gt_column_spanner_outer:last-child {
 padding-right: 0;
 }
-#krmihrremg .gt_column_spanner {
+#yhixctjnus .gt_column_spanner {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
@@ -3441,10 +3447,10 @@ overflow-x: hidden;
 display: inline-block;
 width: 100%;
 }
-#krmihrremg .gt_spanner_row {
+#yhixctjnus .gt_spanner_row {
 border-bottom-style: hidden;
 }
-#krmihrremg .gt_group_heading {
+#yhixctjnus .gt_group_heading {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -3469,7 +3475,7 @@ border-right-color: #D3D3D3;
 vertical-align: middle;
 text-align: left;
 }
-#krmihrremg .gt_empty_group_heading {
+#yhixctjnus .gt_empty_group_heading {
 padding: 0.5px;
 color: #333333;
 background-color: #FFFFFF;
@@ -3483,13 +3489,13 @@ border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 vertical-align: middle;
 }
-#krmihrremg .gt_from_md > :first-child {
+#yhixctjnus .gt_from_md > :first-child {
 margin-top: 0;
 }
-#krmihrremg .gt_from_md > :last-child {
+#yhixctjnus .gt_from_md > :last-child {
 margin-bottom: 0;
 }
-#krmihrremg .gt_row {
+#yhixctjnus .gt_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -3507,7 +3513,7 @@ border-right-color: #D3D3D3;
 vertical-align: middle;
 overflow-x: hidden;
 }
-#krmihrremg .gt_stub {
+#yhixctjnus .gt_stub {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -3519,7 +3525,7 @@ border-right-color: #D3D3D3;
 padding-left: 5px;
 padding-right: 5px;
 }
-#krmihrremg .gt_stub_row_group {
+#yhixctjnus .gt_stub_row_group {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -3532,13 +3538,13 @@ padding-left: 5px;
 padding-right: 5px;
 vertical-align: top;
 }
-#krmihrremg .gt_row_group_first td {
+#yhixctjnus .gt_row_group_first td {
 border-top-width: 2px;
 }
-#krmihrremg .gt_row_group_first th {
+#yhixctjnus .gt_row_group_first th {
 border-top-width: 2px;
 }
-#krmihrremg .gt_summary_row {
+#yhixctjnus .gt_summary_row {
 color: #333333;
 background-color: #FFFFFF;
 text-transform: inherit;
@@ -3547,14 +3553,14 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#krmihrremg .gt_first_summary_row {
+#yhixctjnus .gt_first_summary_row {
 border-top-style: solid;
 border-top-color: #D3D3D3;
 }
-#krmihrremg .gt_first_summary_row.thick {
+#yhixctjnus .gt_first_summary_row.thick {
 border-top-width: 2px;
 }
-#krmihrremg .gt_last_summary_row {
+#yhixctjnus .gt_last_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -3563,7 +3569,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#krmihrremg .gt_grand_summary_row {
+#yhixctjnus .gt_grand_summary_row {
 color: #333333;
 background-color: #FFFFFF;
 text-transform: inherit;
@@ -3572,7 +3578,7 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#krmihrremg .gt_first_grand_summary_row {
+#yhixctjnus .gt_first_grand_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -3581,7 +3587,7 @@ border-top-style: double;
 border-top-width: 6px;
 border-top-color: #D3D3D3;
 }
-#krmihrremg .gt_last_grand_summary_row_top {
+#yhixctjnus .gt_last_grand_summary_row_top {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -3590,10 +3596,10 @@ border-bottom-style: double;
 border-bottom-width: 6px;
 border-bottom-color: #D3D3D3;
 }
-#krmihrremg .gt_striped {
+#yhixctjnus .gt_striped {
 background-color: rgba(128, 128, 128, 0.05);
 }
-#krmihrremg .gt_table_body {
+#yhixctjnus .gt_table_body {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #D3D3D3;
@@ -3601,7 +3607,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#krmihrremg .gt_footnotes {
+#yhixctjnus .gt_footnotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -3614,7 +3620,7 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#krmihrremg .gt_footnote {
+#yhixctjnus .gt_footnote {
 margin: 0px;
 font-size: 90%;
 padding-top: 4px;
@@ -3622,7 +3628,7 @@ padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#krmihrremg .gt_sourcenotes {
+#yhixctjnus .gt_sourcenotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -3635,57 +3641,57 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#krmihrremg .gt_sourcenote {
+#yhixctjnus .gt_sourcenote {
 font-size: 90%;
 padding-top: 4px;
 padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#krmihrremg .gt_left {
+#yhixctjnus .gt_left {
 text-align: left;
 }
-#krmihrremg .gt_center {
+#yhixctjnus .gt_center {
 text-align: center;
 }
-#krmihrremg .gt_right {
+#yhixctjnus .gt_right {
 text-align: right;
 font-variant-numeric: tabular-nums;
 }
-#krmihrremg .gt_font_normal {
+#yhixctjnus .gt_font_normal {
 font-weight: normal;
 }
-#krmihrremg .gt_font_bold {
+#yhixctjnus .gt_font_bold {
 font-weight: bold;
 }
-#krmihrremg .gt_font_italic {
+#yhixctjnus .gt_font_italic {
 font-style: italic;
 }
-#krmihrremg .gt_super {
+#yhixctjnus .gt_super {
 font-size: 65%;
 }
-#krmihrremg .gt_footnote_marks {
+#yhixctjnus .gt_footnote_marks {
 font-size: 75%;
 vertical-align: 0.4em;
 position: initial;
 }
-#krmihrremg .gt_asterisk {
+#yhixctjnus .gt_asterisk {
 font-size: 100%;
 vertical-align: 0;
 }
-#krmihrremg .gt_indent_1 {
+#yhixctjnus .gt_indent_1 {
 text-indent: 5px;
 }
-#krmihrremg .gt_indent_2 {
+#yhixctjnus .gt_indent_2 {
 text-indent: 10px;
 }
-#krmihrremg .gt_indent_3 {
+#yhixctjnus .gt_indent_3 {
 text-indent: 15px;
 }
-#krmihrremg .gt_indent_4 {
+#yhixctjnus .gt_indent_4 {
 text-indent: 20px;
 }
-#krmihrremg .gt_indent_5 {
+#yhixctjnus .gt_indent_5 {
 text-indent: 25px;
 }
 </style>
@@ -3810,6 +3816,18 @@ text-indent: 25px;
 <td headers="stat_0" class="gt_row gt_center">235 (24%)</td></tr>
     <tr><td headers="label" class="gt_row gt_left">    Unknown</td>
 <td headers="stat_0" class="gt_row gt_center">25</td></tr>
+    <tr><td headers="label" class="gt_row gt_left" style="font-weight: bold;">GOVERNMENT PERFORMANCE: GENERAL</td>
+<td headers="stat_0" class="gt_row gt_center"></td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    1</td>
+<td headers="stat_0" class="gt_row gt_center">82 (8.7%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    2</td>
+<td headers="stat_0" class="gt_row gt_center">371 (39%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    3</td>
+<td headers="stat_0" class="gt_row gt_center">336 (35%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    4</td>
+<td headers="stat_0" class="gt_row gt_center">158 (17%)</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    Unknown</td>
+<td headers="stat_0" class="gt_row gt_center">68</td></tr>
     <tr><td headers="label" class="gt_row gt_left" style="font-weight: bold;">GENDER</td>
 <td headers="stat_0" class="gt_row gt_center"></td></tr>
     <tr><td headers="label" class="gt_row gt_left">    0</td>
@@ -3894,7 +3912,7 @@ text-indent: 25px;
 <details>
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>cses_isr <span class="sc">%&gt;%</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(understands_politics, compromise_betrayal_reversed, dont_care_ppl_reversed, trustworthy, main_problem_reversed, strong_leader, decision_by_ppl_reversed, care_tycoons_reversed, gender, age, education, left_right_scale) <span class="sc">%&gt;%</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(understands_politics, compromise_betrayal_reversed, dont_care_ppl_reversed, trustworthy, main_problem_reversed, strong_leader, decision_by_ppl_reversed, care_tycoons_reversed, gov_performance, gender, age, education, left_right_scale) <span class="sc">%&gt;%</span></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  sjPlot<span class="sc">::</span><span class="fu">tab_corr</span>(<span class="at">triangle =</span> <span class="st">&quot;lower&quot;</span>,</span>
 <span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>                   <span class="at">corr.method =</span> <span class="st">&quot;pearson&quot;</span>,</span>
 <span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>                   <span class="at">p.numeric =</span> T,</span>
@@ -3903,6 +3921,7 @@ text-indent: 25px;
 <div class="cell-output-display">
 <table data-quarto-postprocess="true" class="table table-sm table-striped small">
 <colgroup>
+<col style="width: 7%">
 <col style="width: 7%">
 <col style="width: 7%">
 <col style="width: 7%">
@@ -3934,6 +3953,7 @@ BENDS THE RULES</td>
 MAKE POLICY DECISIONS</td>
 <td data-quarto-table-cell-role="th" style="font-style: italic; font-weight: normal; border-top: double black; border-bottom: 1px solid black; padding: 0.2cm">ATTITUDES ABOUT ELITES: RICH AND<br>
 POWERFUL</td>
+<td data-quarto-table-cell-role="th" style="font-style: italic; font-weight: normal; border-top: double black; border-bottom: 1px solid black; padding: 0.2cm">GOVERNMENT PERFORMANCE: GENERAL</td>
 <td data-quarto-table-cell-role="th" style="font-style: italic; font-weight: normal; border-top: double black; border-bottom: 1px solid black; padding: 0.2cm">GENDER</td>
 <td data-quarto-table-cell-role="th" style="font-style: italic; font-weight: normal; border-top: double black; border-bottom: 1px solid black; padding: 0.2cm">AGE OF RESPONDENT (IN YEARS)</td>
 <td data-quarto-table-cell-role="th" style="font-style: italic; font-weight: normal; border-top: double black; border-bottom: 1px solid black; padding: 0.2cm">EDUCATION</td>
@@ -3953,12 +3973,14 @@ POWERFUL</td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
 </tr>
 <tr class="odd">
 <td style="font-style: italic">ATTITUDES ABOUT ELITES: COMPROMISE IS<br>
 SELLING OUT ONE&#39;S PRINCIPLES</td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.028<br>
-<span style="font-style:italic;">(.425)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.021<br>
+<span style="font-style:italic;">(.570)</span></td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
@@ -3974,10 +3996,11 @@ SELLING OUT ONE&#39;S PRINCIPLES</td>
 <tr class="even">
 <td style="font-style: italic">ATTITUDES ABOUT ELITES: DO NOT CARE<br>
 ABOUT THE PEOPLE</td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.040<br>
-<span style="font-style:italic;">(.254)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.271<br>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.035<br>
+<span style="font-style:italic;">(.337)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.268<br>
 <span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
@@ -3991,12 +4014,13 @@ ABOUT THE PEOPLE</td>
 </tr>
 <tr class="odd">
 <td style="font-style: italic">ATTITUDES ABOUT ELITES: ARE TRUSTWORTHY</td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.057<br>
-<span style="font-style:italic;">(.108)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.048<br>
-<span style="font-style:italic;">(.175)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.377<br>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.064<br>
+<span style="font-style:italic;">(.078)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.043<br>
+<span style="font-style:italic;">(.236)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.367<br>
 <span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
@@ -4010,14 +4034,15 @@ ABOUT THE PEOPLE</td>
 <tr class="even">
 <td style="font-style: italic">ATTITUDES ABOUT ELITES: ARE THE MAIN<br>
 PROBLEM</td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.044<br>
-<span style="font-style:italic;">(.213)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.239<br>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.049<br>
+<span style="font-style:italic;">(.174)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.229<br>
 <span style="font-style:italic;">(&lt;.001)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.393<br>
+<td style="text-align: center; padding: 0.2cm;">0.391<br>
 <span style="font-style:italic;">(&lt;.001)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.234<br>
+<td style="text-align: center; padding: 0.2cm;">0.228<br>
 <span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
@@ -4030,16 +4055,17 @@ PROBLEM</td>
 <tr class="odd">
 <td style="font-style: italic">ATTITUDES ABOUT ELITES: STRONG LEADER<br>
 BENDS THE RULES</td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.049<br>
-<span style="font-style:italic;">(.165)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.059<br>
-<span style="font-style:italic;">(.092)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.054<br>
-<span style="font-style:italic;">(.124)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.121<br>
-<span style="font-style:italic;">(.001)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.034<br>
-<span style="font-style:italic;">(.333)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.050<br>
+<span style="font-style:italic;">(.166)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.047<br>
+<span style="font-style:italic;">(.197)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.071<br>
+<span style="font-style:italic;">(.049)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.140<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.046<br>
+<span style="font-style:italic;">(.206)</span></td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
@@ -4051,18 +4077,19 @@ BENDS THE RULES</td>
 <tr class="even">
 <td style="font-style: italic">ATTITUDES ABOUT ELITES: PEOPLE SHOULD<br>
 MAKE POLICY DECISIONS</td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.010<br>
-<span style="font-style:italic;">(.769)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.046<br>
-<span style="font-style:italic;">(.191)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.124<br>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.012<br>
+<span style="font-style:italic;">(.738)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.043<br>
+<span style="font-style:italic;">(.239)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.117<br>
+<span style="font-style:italic;">(.001)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.033<br>
+<span style="font-style:italic;">(.360)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.143<br>
 <span style="font-style:italic;">(&lt;.001)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.049<br>
-<span style="font-style:italic;">(.167)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.147<br>
-<span style="font-style:italic;">(&lt;.001)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.003<br>
-<span style="font-style:italic;">(.940)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.006<br>
+<span style="font-style:italic;">(.865)</span></td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
@@ -4073,18 +4100,18 @@ MAKE POLICY DECISIONS</td>
 <tr class="odd">
 <td style="font-style: italic">ATTITUDES ABOUT ELITES: RICH AND<br>
 POWERFUL</td>
-<td style="text-align: center; padding: 0.2cm;">0.084<br>
-<span style="font-style:italic;">(.018)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.214<br>
+<td style="text-align: center; padding: 0.2cm;">0.083<br>
+<span style="font-style:italic;">(.021)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.215<br>
 <span style="font-style:italic;">(&lt;.001)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.494<br>
+<td style="text-align: center; padding: 0.2cm;">0.496<br>
 <span style="font-style:italic;">(&lt;.001)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.311<br>
+<td style="text-align: center; padding: 0.2cm;">0.305<br>
 <span style="font-style:italic;">(&lt;.001)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.392<br>
+<td style="text-align: center; padding: 0.2cm;">0.399<br>
 <span style="font-style:italic;">(&lt;.001)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.042<br>
-<span style="font-style:italic;">(.238)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.060<br>
+<span style="font-style:italic;">(.099)</span></td>
 <td style="text-align: center; padding: 0.2cm;">0.162<br>
 <span style="font-style:italic;">(&lt;.001)</span></td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
@@ -4092,107 +4119,140 @@ POWERFUL</td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
 </tr>
 <tr class="even">
+<td style="font-style: italic">GOVERNMENT PERFORMANCE: GENERAL</td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.010<br>
+<span style="font-style:italic;">(.778)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.127<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.271<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.216<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.274<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.381<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.140<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.263<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
+</tr>
+<tr class="odd">
 <td style="font-style: italic">GENDER</td>
-<td style="text-align: center; padding: 0.2cm;">0.148<br>
+<td style="text-align: center; padding: 0.2cm;">0.137<br>
 <span style="font-style:italic;">(&lt;.001)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.080<br>
-<span style="font-style:italic;">(.024)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.034<br>
-<span style="font-style:italic;">(.338)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.072<br>
-<span style="font-style:italic;">(.041)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.113<br>
-<span style="font-style:italic;">(.001)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.037<br>
-<span style="font-style:italic;">(.297)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.015<br>
-<span style="font-style:italic;">(.664)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.155<br>
-<span style="font-style:italic;">(&lt;.001)</span></td>
-<td style="text-align: center; padding: 0.2cm;"> </td>
-<td style="text-align: center; padding: 0.2cm;"> </td>
-<td style="text-align: center; padding: 0.2cm;"> </td>
-<td style="text-align: center; padding: 0.2cm;"> </td>
-</tr>
-<tr class="odd">
-<td style="font-style: italic">AGE OF RESPONDENT (IN YEARS)</td>
-<td style="text-align: center; padding: 0.2cm;">-0.173<br>
-<span style="font-style:italic;">(&lt;.001)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.054<br>
-<span style="font-style:italic;">(.127)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.102<br>
-<span style="font-style:italic;">(.004)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.042<br>
-<span style="font-style:italic;">(.237)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.130<br>
-<span style="font-style:italic;">(&lt;.001)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.079<br>
-<span style="font-style:italic;">(.025)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.062<br>
-<span style="font-style:italic;">(.081)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.057<br>
-<span style="font-style:italic;">(.105)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.005<br>
-<span style="font-style:italic;">(.884)</span></td>
-<td style="text-align: center; padding: 0.2cm;"> </td>
-<td style="text-align: center; padding: 0.2cm;"> </td>
-<td style="text-align: center; padding: 0.2cm;"> </td>
-</tr>
-<tr class="even">
-<td style="font-style: italic">EDUCATION</td>
-<td style="text-align: center; padding: 0.2cm;">-0.110<br>
-<span style="font-style:italic;">(.002)</span></td>
-<td style="text-align: center; padding: 0.2cm;">-0.114<br>
-<span style="font-style:italic;">(.001)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.064<br>
-<span style="font-style:italic;">(.069)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">0.032<br>
-<span style="font-style:italic;">(.365)</span></td>
-<td style="text-align: center; padding: 0.2cm;">-0.129<br>
-<span style="font-style:italic;">(&lt;.001)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.192<br>
-<span style="font-style:italic;">(&lt;.001)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.053<br>
-<span style="font-style:italic;">(.133)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.013<br>
-<span style="font-style:italic;">(.721)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.085<br>
+<td style="text-align: center; padding: 0.2cm;">0.087<br>
 <span style="font-style:italic;">(.016)</span></td>
-<td style="text-align: center; padding: 0.2cm;">0.124<br>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.030<br>
+<span style="font-style:italic;">(.410)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.073<br>
+<span style="font-style:italic;">(.044)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.117<br>
+<span style="font-style:italic;">(.001)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.044<br>
+<span style="font-style:italic;">(.228)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.019<br>
+<span style="font-style:italic;">(.591)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.165<br>
 <span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.001<br>
+<span style="font-style:italic;">(.976)</span></td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
+</tr>
+<tr class="even">
+<td style="font-style: italic">AGE OF RESPONDENT (IN YEARS)</td>
+<td style="text-align: center; padding: 0.2cm;">-0.174<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.067<br>
+<span style="font-style:italic;">(.064)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.108<br>
+<span style="font-style:italic;">(.003)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.043<br>
+<span style="font-style:italic;">(.236)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.137<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.071<br>
+<span style="font-style:italic;">(.049)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.069<br>
+<span style="font-style:italic;">(.056)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.072<br>
+<span style="font-style:italic;">(.045)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.102<br>
+<span style="font-style:italic;">(.005)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.002<br>
+<span style="font-style:italic;">(.961)</span></td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 </tr>
 <tr class="odd">
-<td style="font-style: italic">IDEOLOGY: LEFT-RIGHT - SELF</td>
-<td style="text-align: center; padding: 0.2cm;">0.096<br>
-<span style="font-style:italic;">(.006)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.040<br>
-<span style="font-style:italic;">(.253)</span></td>
-<td style="text-align: center; padding: 0.2cm;">-0.122<br>
-<span style="font-style:italic;">(.001)</span></td>
-<td style="text-align: center; padding: 0.2cm;">-0.110<br>
+<td style="font-style: italic">EDUCATION</td>
+<td style="text-align: center; padding: 0.2cm;">-0.101<br>
+<span style="font-style:italic;">(.005)</span></td>
+<td style="text-align: center; padding: 0.2cm;">-0.102<br>
+<span style="font-style:italic;">(.005)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.060<br>
+<span style="font-style:italic;">(.094)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">0.033<br>
+<span style="font-style:italic;">(.356)</span></td>
+<td style="text-align: center; padding: 0.2cm;">-0.131<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.191<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.058<br>
+<span style="font-style:italic;">(.107)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.004<br>
+<span style="font-style:italic;">(.921)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.112<br>
 <span style="font-style:italic;">(.002)</span></td>
-<td style="text-align: center; padding: 0.2cm;">-0.118<br>
-<span style="font-style:italic;">(.001)</span></td>
-<td style="text-align: center; padding: 0.2cm;">-0.404<br>
-<span style="font-style:italic;">(&lt;.001)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.006<br>
-<span style="font-style:italic;">(.875)</span></td>
-<td style="text-align: center; padding: 0.2cm;">-0.167<br>
-<span style="font-style:italic;">(&lt;.001)</span></td>
-<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.010<br>
-<span style="font-style:italic;">(.774)</span></td>
-<td style="text-align: center; padding: 0.2cm;">-0.090<br>
-<span style="font-style:italic;">(.010)</span></td>
-<td style="text-align: center; padding: 0.2cm;">-0.226<br>
-<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.087<br>
+<span style="font-style:italic;">(.016)</span></td>
+<td style="text-align: center; padding: 0.2cm;">0.112<br>
+<span style="font-style:italic;">(.002)</span></td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
 <td style="text-align: center; padding: 0.2cm;"> </td>
 </tr>
 <tr class="even">
-<td colspan="13" style="text-align: right; border-bottom: double black; border-top: 1px solid black; font-style: italic; font-size: 0.9em;">Computed correlation used pearson-method with listwise-deletion.</td>
+<td style="font-style: italic">IDEOLOGY: LEFT-RIGHT - SELF</td>
+<td style="text-align: center; padding: 0.2cm;">0.103<br>
+<span style="font-style:italic;">(.004)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.050<br>
+<span style="font-style:italic;">(.167)</span></td>
+<td style="text-align: center; padding: 0.2cm;">-0.128<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;">-0.117<br>
+<span style="font-style:italic;">(.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;">-0.130<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;">-0.407<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.009<br>
+<span style="font-style:italic;">(.810)</span></td>
+<td style="text-align: center; padding: 0.2cm;">-0.181<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;">-0.464<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm; color: #999999;">-0.007<br>
+<span style="font-style:italic;">(.854)</span></td>
+<td style="text-align: center; padding: 0.2cm;">-0.088<br>
+<span style="font-style:italic;">(.014)</span></td>
+<td style="text-align: center; padding: 0.2cm;">-0.235<br>
+<span style="font-style:italic;">(&lt;.001)</span></td>
+<td style="text-align: center; padding: 0.2cm;"> </td>
+</tr>
+<tr class="odd">
+<td colspan="14" style="text-align: right; border-bottom: double black; border-top: 1px solid black; font-style: italic; font-size: 0.9em;">Computed correlation used pearson-method with listwise-deletion.</td>
 </tr>
 </tbody>
 </table>
