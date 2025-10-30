@@ -1,0 +1,1965 @@
+---
+title: "Populism stereotype pilot 2 - codebook raw"
+author: "Saar Alon-Barkat"
+date: "August 2025"
+format:
+  html:
+    self-contained: true
+    code-fold: true
+    toc: true
+    toc-location: left
+execute:
+  message: false
+  warning: false
+---
+
+```{r}
+library(tidyverse)
+library(gt)
+library(gtsummary)
+library(sjPlot)
+library(haven)
+library(labelled)
+library(codebook)
+library(janitor)
+library(lavaan)
+```
+
+Import data
+
+```{r}
+load(".RData")
+```
+
+# Populist attitudes
+
+**popular sovereignty**
+
+-   **pop1 המילה האחרונה בהחלטות הפוליטיות החשובות ביותר, צריכה להיות של העם (למשל באמצעות משאל עם)**
+-   **pop2 בהכרעות פוליטיות חשובות, חייבים לשאול לדעתו של העם**
+-   **pop3 העם, ולא נבחרי הציבור, צריכים להיות אלה שמקבלים את החלטות המדיניות החשובות ביותר**
+
+**Anti elitism**
+
+-   **pop4 ההבדלים בין האליטות לעם הם הרבה יותר גדולים מאשר ההבדלים בתוך העם עצמו**
+-   **pop5 המדינה שלנו מנוהלת בפועל על ידי קבוצה קטנה של בעלי אינטרס חזקים הפועלים לטובת עצמם**
+-   **pop6 אליטות שלא נותנות דין וחשבון לאף אחד מונעות מהאזרחים הפשוטים לשפר את חייהם**
+-   **pop7 לא משנה את מי העם בוחר בבחירות, בסוף מי שקובע באמת מה תהיה המדיניות הן האליטות ששולטות במדינה**
+
+**Homogeneity**
+
+-   **pop8 האנשים הפשוטים פועלים יחד ובשיתוף פעולה**
+-   **pop9 אנשים פשוטים הם טובים וישרים**
+-   **pop10 האנשים הרגילים חולקים את אותם ערכים ואינטרסים**
+
+**Menichean**
+
+-   **pop11 בסופו של דבר, פוליטיקה היא מאבק בין העם לבעלי הכוח**
+-   **pop12 פוליטיקה היא למעשה מאבק בין טוב לרע**
+-   **pop13 מה שאנשים מכנים 'פשרה' בפוליטיקה הוא למעשה ויתור על עקרונות**
+
+```{r}
+pilot2 %>% 
+  dplyr::select(pop1_n:pop13_n) %>% 
+  sjPlot::tab_corr()
+```
+
+## Alpha
+
+```{r}
+pilot2 %>% 
+  dplyr::select(pop1_n:pop13_n) %>% 
+  sjPlot::tab_itemscale()
+```
+
+popular sovereignty
+
+```{r}
+pilot2 %>% 
+  dplyr::select(pop1_n:pop3_n) %>% 
+  sjPlot::tab_itemscale()
+```
+
+Anti elitism
+
+```{r}
+pilot2 %>% 
+  dplyr::select(pop4_n:pop7_n) %>% 
+  sjPlot::tab_itemscale()
+```
+
+Homogeneity
+
+```{r}
+pilot2 %>% 
+  dplyr::select(pop8_n:pop10_n) %>% 
+  sjPlot::tab_itemscale()
+```
+
+Menichean
+
+```{r}
+pilot2 %>% 
+  dplyr::select(pop11_n:pop13_n) %>% 
+  sjPlot::tab_itemscale()
+```
+
+## CFA
+
+### 1 factor
+
+```{r}
+cfa.model.1factor <- '
+  one_factor =~ pop1_n + pop2_n + pop3_n + pop4_n + pop5_n +
+                pop6_n + pop7_n + pop8_n + pop9_n + pop10_n +
+                pop11_n + pop12_n + pop13_n'
+
+fit.cfa.model.1factor <- cfa(cfa.model.1factor,# model formula,
+                             data = pilot2,
+                             se = "robust",
+                             std.lv = T)
+
+summary(fit.cfa.model.1factor, fit.measures = TRUE, standardize = TRUE)
+```
+
+### 3 factor model adjusted
+
+```{r}
+cfa.model.3factor <- '
+  Popular_sovereignty =~ pop1_n + pop2_n + pop3_n
+  Anti_elitism =~ pop4_n + pop5_n + pop6_n + pop7_n
+  Homogeneity =~  pop8_n + pop9_n + pop10_n'
+
+fit.cfa.model.3factor <- cfa(cfa.model.3factor,# model formula,
+                             data = pilot2,
+                             se = "robust",
+                             std.lv = T)
+
+summary(fit.cfa.model.3factor, fit.measures = TRUE, standardize = TRUE)
+```
+
+```{r}
+parameterEstimates(fit.cfa.model.3factor, standardized=TRUE) %>% 
+  filter(op == "=~") %>% 
+  mutate(Beta = str_c(std.all %>% round(3)," (",pvalue %>% round(3),")")) %>% 
+    dplyr::select('Latent Factor'=lhs,  
+           'Indicator' = rhs,
+           'Estimate std.' = Beta) %>% 
+  kableExtra::kable(digits = 3) %>% 
+    kableExtra::kable_styling(bootstrap_options = c("condensed"),
+                full_width = F,
+                position = "left")%>%
+  kableExtra::collapse_rows(columns = 1, valign = "top")
+```
+
+```{r}
+fitmeasures(fit.cfa.model.3factor, c('chisq','df','pvalue','cfi','tli', 'rmsea', 'rmsea.ci.upper','rmsea.ci.lower', 'srmr')) %>% 
+  broom::tidy() %>% 
+  pivot_wider(names_from = names,values_from = x) %>% 
+  mutate(chisq_01 = str_c(chisq %>% round(3)," [","df=",df,", p=",pvalue %>% round(3),"]"),
+         rmsea_01 = str_c(rmsea %>% round(3)," CI[", rmsea.ci.lower %>% round(3),",",rmsea.ci.upper %>% round(3),"]"),
+         cfi = cfi %>% round(3),
+         tli = tli %>% round(3),
+         srmr = srmr %>% round(3),
+         n = fit.cfa.model.3factor@SampleStats@nobs) %>%
+  dplyr::select('N' = n,
+          'Chi-sq' = chisq_01,
+         'CFI' = cfi,
+         'TLI' = tli,
+         'RMSEA' = rmsea_01,
+         'SRMR' = srmr) %>% 
+  t() %>% 
+  kableExtra::kable()
+```
+
+
+### 4 factor model adjusted
+
+```{r}
+cfa.model.4factor <- '
+  Popular_sovereignty =~ pop1_n + pop2_n + pop3_n
+  Anti_elitism =~ pop4_n + pop5_n + pop6_n + pop7_n
+  Homogeneity =~  pop8_n + pop9_n + pop10_n
+  Manichean =~ pop11_n + pop12_n + pop13_n'
+
+fit.cfa.model.4factor <- cfa(cfa.model.4factor,# model formula,
+                             data = pilot2,
+                             se = "robust",
+                             std.lv = T)
+
+summary(fit.cfa.model.4factor, fit.measures = TRUE, standardize = TRUE)
+```
+
+```{r}
+parameterEstimates(fit.cfa.model.4factor, standardized=TRUE) %>% 
+  filter(op == "=~") %>% 
+  mutate(Beta = str_c(std.all %>% round(3)," (",pvalue %>% round(3),")")) %>% 
+    dplyr::select('Latent Factor'=lhs,  
+           'Indicator' = rhs,
+           'Estimate std.' = Beta) %>% gt::gt() 
+```
+
+```{r}
+fitmeasures(fit.cfa.model.4factor, c('chisq','df','pvalue','cfi','tli', 'rmsea', 'rmsea.ci.upper','rmsea.ci.lower', 'srmr')) %>% 
+  broom::tidy() %>% 
+  pivot_wider(names_from = names,values_from = x) %>% 
+  mutate(chisq_01 = str_c(chisq %>% round(3)," [","df=",df,", p=",pvalue %>% round(3),"]"),
+         rmsea_01 = str_c(rmsea %>% round(3)," CI[", rmsea.ci.lower %>% round(3),",",rmsea.ci.upper %>% round(3),"]"),
+         cfi = cfi %>% round(3),
+         tli = tli %>% round(3),
+         srmr = srmr %>% round(3),
+         n = fit.cfa.model.4factor@SampleStats@nobs) %>%
+  dplyr::select('N' = n,
+          'Chi-sq' = chisq_01,
+         'CFI' = cfi,
+         'TLI' = tli,
+         'RMSEA' = rmsea_01,
+         'SRMR' = srmr) %>% 
+  t() %>% 
+  kableExtra::kable()
+```
+
+
+## Destribution of dimensions (scales)
+
+```{r}
+pilot2 %>% 
+  dplyr::select(popular_sovereignty:populist_attitudes_index_3dim) %>% 
+  sjmisc::descr() %>% gt::gt()
+```
+
+```{r}
+hist(pilot2$popular_sovereignty)
+hist(pilot2$anti_elitism)
+hist(pilot2$homogeneity)
+hist(pilot2$manichean)
+
+hist(pilot2$populist_attitudes_index_4dim)
+hist(pilot2$populist_attitudes_index_3dim)
+```
+
+```{r}
+
+pilot2 %>% 
+  dplyr::select(popular_sovereignty:manichean) %>% 
+GGally::ggpairs()
+```
+
+## Populist attitudes and partisanship
+
+```{r}
+pilot2 %>%
+  filter(party_vote_past!=9) %>% 
+  mutate(
+    party_vote_past = labelled::to_factor(party_vote_past)
+  ) %>%
+  group_by(party_vote_past) %>%
+  mutate(mean_pop = mean(populist_attitudes_index_3dim, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_past = fct_reorder(party_vote_past, mean_pop)) %>%
+  ggplot(aes(x = party_vote_past, y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes Index",
+    title = "Populist Attitudes by Past Vote"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+    filter(party_vote_intention!=9) %>% 
+  drop_na(party_vote_intention) %>% 
+  mutate(
+    party_vote_intention = labelled::to_factor(party_vote_intention)
+  ) %>%
+  group_by(party_vote_intention) %>%
+  mutate(mean_pop = mean(populist_attitudes_index_4dim, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_intention = fct_reorder(party_vote_intention, mean_pop)) %>%
+  ggplot(aes(x = party_vote_intention, y = populist_attitudes_index_3dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes Index (3 dimensions)",
+    title = "Populist Attitudes by Voting Intention"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+  drop_na(right_left_ideology) %>% 
+  ggplot(aes(x = right_left_ideology %>% labelled::to_factor(), y = populist_attitudes_index_3dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by Ideology"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+  drop_na(coalition_party_vote_past) %>% 
+  ggplot(aes(x = coalition_party_vote_intention %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "coalition_party_vote_past"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+  drop_na(coalition_party_vote_intention) %>% 
+  ggplot(aes(x = coalition_party_vote_intention %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "coalition_party_vote_intention"
+  ) +
+  theme_minimal()
+```
+
+#### Anti elitism and partisanship
+
+```{r}
+pilot2 |> labelled::to_factor() |> 
+  dplyr::select(party_vote_past,
+                party_vote_intention,
+                coalition_party_vote_past) %>% 
+  gtsummary::tbl_summary(by=coalition_party_vote_past)
+```
+
+```{r}
+pilot2 |>
+  labelled::to_factor() |>
+  dplyr::select(
+    party_vote_intention,
+    party_vote_past,
+    coalition_party_vote_intention
+  ) %>%
+  gtsummary::tbl_summary(by = coalition_party_vote_intention)
+```
+
+```{r}
+pilot2 %>%
+      filter(party_vote_intention!=9) %>% 
+  mutate(
+    party_vote_past = labelled::to_factor(party_vote_past)
+  ) %>%
+  group_by(party_vote_past) %>%
+  mutate(mean_pop = mean(anti_elitism, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_past = fct_reorder(party_vote_past, mean_pop)) %>%
+  ggplot(aes(x = party_vote_past, y = anti_elitism)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Anti_elitism",
+    title = "Populist Attitudes by Past Vote"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+      filter(party_vote_intention!=9) %>% 
+  mutate(
+    party_vote_intention = labelled::to_factor(party_vote_intention)
+  ) %>%
+  group_by(party_vote_intention) %>%
+  mutate(mean_pop = mean(anti_elitism, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_intention = fct_reorder(party_vote_intention, mean_pop)) %>%
+  ggplot(aes(x = party_vote_intention, y = anti_elitism)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Anti_elitism",
+    title = "Populist Attitudes by Voting Intention"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+  mutate(
+    political_block = labelled::to_factor(political_block)
+  ) %>%
+  group_by(political_block) %>%
+  mutate(mean_pop = mean(anti_elitism, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(political_block = fct_reorder(political_block, mean_pop)) %>%
+  ggplot(aes(x = political_block, y = anti_elitism)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Anti_elitism",
+    title = "Populist Attitudes by Voting Intention"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+  drop_na(right_left_ideology) %>% 
+  ggplot(aes(x = right_left_ideology %>% labelled::to_factor(), y = anti_elitism)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by Ideology"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+  drop_na(coalition_party_vote_intention) %>% 
+  ggplot(aes(x = anti_elitism, fill = coalition_party_vote_intention %>% labelled::to_factor())) +
+  geom_bar(position=position_dodge()) #+
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "anti_elitism",
+    title = "coalition_party_vote_intention"
+  ) +
+  theme_minimal()
+```
+
+#### Homogeneity
+
+```{r}
+pilot2 %>%
+      filter(party_vote_intention!=9) %>% 
+  mutate(
+    party_vote_intention = labelled::to_factor(party_vote_intention)
+  ) %>%
+  group_by(party_vote_intention) %>%
+  mutate(mean_pop = mean(homogeneity, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_intention = fct_reorder(party_vote_intention, mean_pop)) %>%
+  ggplot(aes(x = party_vote_intention, y = homogeneity)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "homogeneity",
+    title = "homogeneity by Voting Intention"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+  drop_na(coalition_party_vote_intention) %>% 
+  ggplot(aes(x = homogeneity, fill = coalition_party_vote_intention %>% labelled::to_factor())) +
+  geom_bar(position=position_dodge()) +
+  theme_minimal()
+```
+
+#### Popular suvrenity
+
+```{r}
+pilot2 %>%
+      filter(party_vote_intention!=9) %>% 
+mutate(
+    party_vote_intention = labelled::to_factor(party_vote_intention)
+  ) %>%
+  group_by(party_vote_intention) %>%
+  mutate(mean_pop = mean(popular_sovereignty, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_intention = fct_reorder(party_vote_intention, mean_pop)) %>%
+  ggplot(aes(x = party_vote_intention, y = popular_sovereignty)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "popular_sovereignty",
+    title = "popular_sovereignty by Voting Intention"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+  drop_na(coalition_party_vote_intention) %>% 
+  ggplot(aes(x = popular_sovereignty, fill = coalition_party_vote_intention %>% labelled::to_factor())) +
+  geom_bar(position=position_dodge()) +
+  theme_minimal()
+```
+
+
+```{r}
+pilot2 %>%
+      dplyr::select(populist_attitudes_index_3dim,
+      anti_elitism,
+      homogeneity,
+      popular_sovereignty,
+      manichean,
+      coalition_party_vote_intention) %>%
+        gtsummary::tbl_summary(by=coalition_party_vote_intention)
+```
+
+### Correlations with other variables
+
+```{r}
+pilot2 %>%
+  drop_na(education) %>% 
+  ggplot(aes(x = education %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by education"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+  drop_na(income) %>% 
+  ggplot(aes(x = income %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by income"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+  drop_na(religiosity) %>% 
+  ggplot(aes(x = religiosity %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by religiosity"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+  drop_na(ethnic_identity) %>% 
+  ggplot(aes(x = ethnic_identity %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by ethnic_identity"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+  drop_na(public_sector_employee_current, populist_attitudes_index_4dim) %>%
+  mutate(public_sector_employee_current = labelled::to_factor(public_sector_employee_current)) %>%
+  ggplot(aes(x = populist_attitudes_index_4dim, fill = public_sector_employee_current)) +
+  geom_histogram(position = "identity", alpha = 0.5, bins = 30, color = "black") +
+  labs(
+    x = "Populist Attitudes Index",
+    y = "Count",
+    title = "Distribution of Populist Attitudes by public_sector_employee_current"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+  drop_na(gender, populist_attitudes_index_4dim) %>%
+  mutate(gender = labelled::to_factor(gender)) %>%
+  ggplot(aes(x = populist_attitudes_index_4dim, fill = gender)) +
+  geom_histogram(position = "identity", alpha = 0.5, bins = 30, color = "black") +
+  labs(
+    x = "Populist Attitudes Index",
+    y = "Count",
+    title = "Distribution of Populist Attitudes by Gender"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+  drop_na(affect_right) %>% 
+  ggplot(aes(x = affect_right %>% labelled::to_factor(), y = populist_attitudes_index_3dim)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by affect_right"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot %>%
+  drop_na(affect_left) %>% 
+  ggplot(aes(x = affect_left %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by affect_left"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+t1 <- pilot2 %>% 
+  mutate(affective_delta = abs(affect_right-affect_left)) 
+```
+
+```{r}
+hist(t1$affective_delta)
+```
+
+```{r}
+t1 %>%
+  drop_na(affective_delta) %>% 
+  ggplot(aes(x = affective_delta %>% labelled::to_factor(), y = populist_attitudes_index_3dim)) +
+  geom_jitter() +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by abs (affect_right - affect_left)"
+  ) +
+  theme_minimal()
+```
+
+
+
+```{r}
+t1 %>% labelled::remove_labels() %>% 
+  drop_na(affective_delta) %>% 
+  ggplot(aes(x = affective_delta %>% labelled::to_factor(), y = populist_attitudes_index_3dim)) +
+  geom_jitter(aes(color=factor(political_block))) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes index",
+    title = "Populist Attitudes by abs (affect_right - affect_left)"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>% 
+  dplyr::select(populist_attitudes_index_4dim,
+                populist_attitudes_index_3dim,
+                popular_sovereignty:manichean,
+                female,
+                age_group,
+                income,
+                subjective_social_economic_status,
+                education,
+                religiosity,
+                right_left_ideology,
+                external_efficecy,
+                affect_right,
+                affect_left,
+                affective_polarization) %>% labelled::remove_labels() %>% 
+  sjPlot::tab_corr(triangle = "lower",
+  show.p = TRUE,
+  p.numeric = TRUE)
+```
+
+```{r}
+model_1 <- lm(populist_attitudes_index_4dim ~ coalition_party_vote_intention + 
+  female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                external_efficecy+
+                subjective_social_economic_status +
+                affective_polarization,pilot2 %>% labelled::remove_labels(),na.rm=T)
+
+model_2 <- model_1 %>% update(popular_sovereignty~.)
+model_3 <- model_1 %>% update(anti_elitism~.)
+model_4 <- model_1 %>% update(homogeneity~.)
+model_5 <- model_1 %>% update(manichean~.)
+
+
+sjPlot::tab_model(model_1,model_2,model_3,model_4,model_5,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+# Trust
+
+```{r}
+pilot2 %>% labelled::remove_labels() %>% 
+  dplyr::select(trust_knesset:trust_media,coalition_party_vote_intention) %>% 
+  gtsummary::tbl_summary(
+statistic = list(by="coalition_party_vote_intention")
+```
+
+```{r}
+
+pilot2 %>% labelled::remove_labels() |> 
+  group_by(coalition_party_vote_intention) |>
+  summarise(
+    across(trust_knesset:trust_media, ~mean(.x, na.rm=TRUE))
+  )
+```
+
+```{r}
+pilot2 %>% labelled::remove_labels() %>% 
+  dplyr::select(trust_knesset:trust_media) %>% 
+  sjPlot::tab_itemscale()
+```
+
+```{r}
+pilot2 %>% labelled::remove_labels() %>% 
+  dplyr::select(populist_attitudes_index_3dim,                popular_sovereignty:manichean,
+trust_knesset:trust_media) %>% 
+  sjPlot::tab_corr(triangle = "lower")
+```
+
+```{r}
+t1 <- pilot2 %>% 
+  mutate(trust_index = (trust_knesset+
+           trust_government+
+           trust_judiciary+
+           trust_health+
+           trust_police+
+           trust_municipality+
+           trust_civil_service+
+           trust_media)/8)
+
+
+t1 %>% 
+  dplyr::select(populist_attitudes_index_3dim,trust_index) %>% 
+  sjPlot::tab_corr()
+```
+
+```{r}
+pilot2 %>% labelled::remove_labels() |> 
+  dplyr::select(populist_attitudes_index_3dim,trust_knesset,
+           trust_government,
+           trust_judiciary,
+           trust_health,
+           trust_police,
+           trust_municipality,
+           trust_civil_service,
+           trust_media) |> 
+  sjPlot::tab_corr()
+```
+
+```{r}
+pilot2 %>%
+  mutate(
+    trust_government = labelled::to_factor(trust_government)
+  ) %>%
+  ggplot(aes(x = trust_government, y = populist_attitudes_index_3dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes Index",
+    title = "Populist Attitudes by trust in government"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+  mutate(
+    trust_government = labelled::to_factor(trust_government)
+  ) %>%
+  ggplot(aes(x = trust_government, y = populist_attitudes_index_3dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes Index",
+    title = "Populist Attitudes by Past Vote"
+  ) +
+    facet_wrap(vars(coalition_party_vote_intention))+
+  theme_minimal()
+```
+
+```{r}
+tmod1 <- lm(trust_government ~ populist_attitudes_index_3dim, data=pilot2 %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+ coalition_party_vote_intention)
+tmod3 <- tmod1 %>% update(.~.,data=pilot2 %>% labelled::remove_labels() %>% filter(coalition_party_vote_intention=="Netanyahu coalition"))
+tmod4 <- tmod1 %>% update(.~.,data=pilot2 %>% labelled::remove_labels() %>% filter(coalition_party_vote_intention=="Anti Netanyahu coalition"))
+tmod5 <- tmod1 %>% update(.~.+ populist_attitudes_index_3dim*coalition_party_vote_intention)
+
+
+sjPlot::tab_model(tmod1,tmod2,tmod3,tmod4,tmod5,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+```{r}
+sjPlot::plot_model(tmod5,type = "pred",terms = c("populist_attitudes_index_3dim", "coalition_party_vote_intention"))
+```
+
+```{r}
+tmod1 <- lm(populist_attitudes_index_3dim ~ trust_knesset, data=pilot2 %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.,data=pilot2 %>% labelled::remove_labels() %>% filter(coalition_party_vote_intention=="Netanyahu coalition"))
+tmod3 <- tmod1 %>% update(.~.,data=pilot2 %>% labelled::remove_labels() %>% filter(coalition_party_vote_intention=="Anti Netanyahu coalition"))
+
+
+sjPlot::tab_model(tmod1,tmod2,tmod3,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+```{r}
+tmod1 <- lm(trust_civil_service ~ populist_attitudes_index_3dim, data=pilot2 %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+ coalition_party_vote_intention)
+tmod3 <- tmod1 %>% update(.~.,data=pilot2 %>% labelled::remove_labels() %>% filter(coalition_party_vote_intention=="Netanyahu coalition"))
+tmod4 <- tmod1 %>% update(.~.,data=pilot2 %>% labelled::remove_labels() %>% filter(coalition_party_vote_intention=="Anti Netanyahu coalition"))
+tmod5 <- tmod1 %>% update(.~.+ populist_attitudes_index_3dim*coalition_party_vote_intention)
+
+
+sjPlot::tab_model(tmod1,tmod2,tmod3,tmod4,tmod5,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+```{r}
+sjPlot::plot_model(tmod5,type = "pred",terms = c("populist_attitudes_index_3dim", "coalition_party_vote_intention"))
+```
+
+
+Correlations between trust and populist attitudes across partisanship
+```{r}
+pilot2 %>% labelled::remove_labels() %>% 
+  dplyr::select(populist_attitudes_index_3dim,                popular_sovereignty:manichean,
+trust_knesset:trust_media) %>% 
+  sjPlot::tab_corr(triangle = "lower",
+  title = "All respondents")
+```
+
+```{r}
+pilot2 %>% filter(coalition_party_vote_intention=="Netanyahu coalition") %>% labelled::remove_labels() %>%
+  dplyr::select(populist_attitudes_index_3dim,                popular_sovereignty:manichean,
+trust_knesset:trust_media) %>% 
+  sjPlot::tab_corr(triangle = "lower",
+  title = "Netanyahu coalition")
+```
+
+```{r}
+pilot2 %>% filter(coalition_party_vote_intention=="Anti Netanyahu coalition") %>% labelled::remove_labels() %>%
+  dplyr::select(populist_attitudes_index_3dim,                popular_sovereignty:manichean,
+trust_knesset:trust_media) %>% 
+  sjPlot::tab_corr(triangle = "lower",
+  title = "Anti Netanyahu coalition")
+```
+
+
+
+```{r}
+##ggplot2 histogram of trust in civil service
+
+pilot2 |> 
+  labelled::remove_labels() |> 
+  ggplot(aes(x = trust_civil_service)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Distribution of Trust in Civil Service",
+    x = "Trust in Civil Service Score",
+    y = "Count"
+  ) +
+  theme_minimal()
+
+```
+
+
+```{r}
+##ggplot2 histogram of trust in civil service
+
+pilot2 |> 
+  labelled::remove_labels() |> 
+  ggplot(aes(x = trust_civil_service)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
+  facet_wrap(vars(coalition_party_vote_intention))+
+  labs(
+    title = "Distribution of Trust in Civil Service",
+    x = "Trust in Civil Service Score",
+    y = "Count"
+  ) +
+  theme_minimal()
+
+```
+
+```{r}
+model_1 <- lm(trust_civil_service ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels(),na.rm=T)
+
+model_2 <- model_1 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+
+model_3 <- model_1 %>% update(.~.+ 
+  female +
+                age_group+
+                income+
+                education+
+                external_efficecy+
+                subjective_social_economic_status +
+                affective_polarization)
+model_4 <- model_3 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+
+
+
+sjPlot::tab_model(model_1,model_2,model_3,model_4,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+```{r}
+sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4dim", "coalition_party_vote_intention"))
+```
+
+
+
+
+```{r}
+##ggplot2 histogram of trust in civil service
+
+pilot2 |> 
+  labelled::remove_labels() |> 
+  ggplot(aes(x = trust_civil_service)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
+  facet_wrap(vars(coalition_party_vote_intention))+
+  labs(
+    title = "Distribution of Trust in Civil Service",
+    x = "Trust in Civil Service Score",
+    y = "Count"
+  ) +
+  theme_minimal()
+
+```
+
+```{r}
+model_1 <- lm(trust_police ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels(),na.rm=T)
+
+model_2 <- model_1 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+
+model_3 <- model_1 %>% update(.~.+ 
+  female +
+                age_group+
+                income+
+                education+
+                external_efficecy+
+                subjective_social_economic_status +
+                affective_polarization)
+model_4 <- model_3 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+
+
+
+sjPlot::tab_model(model_1,model_2,model_3,model_4,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+```{r}
+sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4dim", "coalition_party_vote_intention"))
+```
+
+# Conspiracy
+
+```{r}
+##ggplot2 histogram of conspiracy beliefs
+
+pilot2 |> 
+  labelled::remove_labels() |> 
+  ggplot(aes(x = conspiracy_deep_state_n)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Distribution of Deep State Conspiracy Beliefs",
+    x = "Deep State Conspiracy Belief Score",
+    y = "Count"
+  ) +
+  theme_minimal()
+
+```
+
+
+```{r}
+pilot2 %>%
+  drop_na(party_vote_intention) %>% 
+  ggplot(aes(x = party_vote_intention %>% labelled::to_factor(), y = conspiracy_deep_state_n)) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+labs(x = NULL,
+    y = "Deep State Conspiracy Belief Score",
+    title = "Deep State Conspiracy Beliefs by Voting Intention"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>%
+  drop_na(coalition_party_vote_intention) %>% 
+  ggplot(aes(x = coalition_party_vote_intention %>% labelled::to_factor(), y = conspiracy_deep_state_n)) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+labs(x = NULL,
+    y = "Deep State Conspiracy Belief Score",
+    title = "Deep State Conspiracy Beliefs by Voting Intention coalition"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+pilot2 %>% labelled::remove_labels() %>% 
+  dplyr::select(populist_attitudes_index_3dim,                popular_sovereignty:manichean,
+conspiracy_deep_state_n,conspiracy_vaccine_n) %>% 
+  sjPlot::tab_corr(triangle = "lower")
+
+```
+
+```{r}
+pilot2 %>% labelled::remove_labels() %>% 
+  dplyr::select(populist_attitudes_index_3dim,                popular_sovereignty:manichean,
+conspiracy_deep_state_n,conspiracy_vaccine_n,
+trust_knesset:trust_media) %>% 
+  sjPlot::tab_corr(triangle = "lower")
+
+```
+
+
+Correlations between trust and populist attitudes across partisanship
+```{r}
+pilot2 %>%
+  labelled::remove_labels() %>%
+  dplyr::select(
+    populist_attitudes_index_3dim,
+        popular_sovereignty:manichean,
+    conspiracy_deep_state_n,
+    conspiracy_vaccine_n,
+    trust_knesset:trust_media
+  ) %>%
+  sjPlot::tab_corr(triangle = "lower", title = "All respondents")
+```
+
+```{r}
+pilot2 %>%
+  filter(coalition_party_vote_intention == "Netanyahu coalition") %>%
+  labelled::remove_labels() %>%
+  dplyr::select(
+    populist_attitudes_index_3dim,populist_attitudes_index_4dim,
+        popular_sovereignty:manichean,
+    conspiracy_deep_state_n,
+    conspiracy_vaccine_n,
+    trust_knesset:trust_media
+  ) %>%
+  sjPlot::tab_corr(triangle = "lower", title = "Netanyahu coalition")
+```
+
+```{r}
+pilot2 %>%
+  filter(coalition_party_vote_intention == "Anti Netanyahu coalition") %>%
+  labelled::remove_labels() %>%
+  dplyr::select(
+    populist_attitudes_index_3dim,populist_attitudes_index_4dim,
+        popular_sovereignty:manichean,
+    conspiracy_deep_state_n,
+    conspiracy_vaccine_n,
+    trust_knesset:trust_media
+  ) %>%
+  sjPlot::tab_corr(triangle = "lower", title = "Anti Netanyahu coalition")
+```
+
+Models for deep state conspiracy belief
+
+
+```{r}
+model_1 <- lm(conspiracy_deep_state_n ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels(),na.rm=T)
+
+model_2 <- model_1 %>% update(conspiracy_deep_state_n~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+
+model_3 <- model_1 %>% update(.~.+ 
+  female +
+                age_group+
+                income+
+                education+
+                external_efficecy+
+                subjective_social_economic_status +
+                affective_polarization)
+model_4 <- model_3 %>% update(conspiracy_deep_state_n~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+
+
+
+sjPlot::tab_model(model_1,model_2,model_3,model_4,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+
+Models for vaccine conspiracy belief
+
+
+```{r}
+model_1 <- lm(conspiracy_vaccine_n ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels(),na.rm=T)
+
+model_2 <- model_1 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+
+model_3 <- model_1 %>% update(.~.+ 
+  female +
+                age_group+
+                income+
+                education+
+                external_efficecy+
+                subjective_social_economic_status +
+                affective_polarization)
+model_4 <- model_3 %>% update(conspiracy_deep_state_n~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+
+
+
+sjPlot::tab_model(model_1,model_2,model_3,model_4,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+```{r}
+sjPlot::plot_model(model_2,type = "pred",terms = c("populist_attitudes_index_4dim", "coalition_party_vote_intention"))
+```
+
+
+# Dimensions
+
+```{r}
+coded_responses_pilot2 <- read_csv("data/coded_responses_P2_merged.csv")
+
+responses_pilot2 <- coded_responses_pilot2 %>% 
+  filter(`erase?`!=1) %>% 
+  left_join(pilot2,by=c("civil_servant_label","response_id"))
+```
+
+```{r}
+responses_pilot2 %>% 
+  mutate(response_direction = as.numeric(response_direction)) %>% 
+  dplyr::select(civil_servant_label,
+                response_direction,
+                assertiveness:other) %>% 
+  gtsummary::tbl_summary(by=civil_servant_label)
+
+```
+
+Civil servants
+
+```{r}
+responses_pilot2 %>% 
+  filter(civil_servant_label=="public service employee") %>% 
+  ggplot(aes(x=response_direction))+
+  geom_bar()+
+  labs(title="All responses")
+
+responses_pilot2 %>% 
+  filter(civil_servant_label=="public service employee",
+         sociability==1) %>% 
+  ggplot(aes(x=response_direction))+
+  geom_bar()+
+  labs(title="Sociability")
+
+responses_pilot2 %>% 
+  filter(civil_servant_label=="public service employee",
+         morality==1) %>% 
+  ggplot(aes(x=response_direction))+
+  geom_bar()+
+  labs(title="Morality")
+
+
+responses_pilot2 %>% 
+  filter(civil_servant_label=="public service employee",
+         ability==1) %>% 
+  ggplot(aes(x=response_direction))+
+  geom_bar()+
+  labs(title="Ability")
+
+
+responses_pilot2 %>% 
+  filter(civil_servant_label=="public service employee",
+         assertiveness==1) %>% 
+  ggplot(aes(x=response_direction))+
+  geom_bar()+
+  labs(title="Assertiveness")
+
+
+```
+
+```{r}
+responses_pilot2 %>% 
+#filter(civil_servant_label!="public service bureaucrat") %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=response_direction))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  facet_wrap(vars(civil_servant_label))+
+  theme_blank()
+  
+```
+
+Civil servants
+
+```{r}
+tmod1 <- lme4::lmer(response_direction~populist_attitudes_index_3dim + (1|pid.x),data=responses %>% filter(entity=="civil servants") %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+
+                            female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                external_efficecy+
+                subjective_social_economic_status)
+
+sjPlot::tab_model(tmod1,tmod2,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+
+```
+
+Junior civil servants
+
+```{r}
+tmod1 <- lme4::lmer(response_direction~populist_attitudes_index_3dim + (1|pid.x),data=responses %>% filter(entity=="junior civil servants") %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+
+                            female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                external_efficecy+
+                subjective_social_economic_status)
+
+sjPlot::tab_model(tmod1,tmod2,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+
+```
+
+Senior civil servants
+
+```{r}
+tmod1 <- lme4::lmer(response_direction~populist_attitudes_index_3dim + (1|pid.x),data=responses %>% filter(entity=="senior civil servants") %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+
+                            female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                external_efficecy+
+                subjective_social_economic_status)
+
+sjPlot::tab_model(tmod1,tmod2,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+
+```
+
+## Civil servants
+
+```{r}
+responses %>% 
+  filter(entity=="civil servants") %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=morality))+
+  geom_point()+
+  geom_smooth()+
+  theme_blank()
+
+responses %>% 
+  filter(entity=="civil servants") %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=ability))+
+  geom_point()+
+  geom_smooth()+
+  theme_blank()
+
+
+responses %>% 
+  filter(entity=="civil servants") %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=assertiveness))+
+  geom_point()+
+  geom_smooth()+
+  theme_blank()
+
+responses %>% 
+  filter(entity=="civil servants") %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=populi))+
+  geom_point()+
+  geom_smooth()+
+  theme_blank()
+
+```
+
+```{r}
+tmod1 <- lme4::glmer(morality~populist_attitudes_index_3dim + (1|pid.x),family="binomial" ,data=responses %>% filter(entity=="civil servants") %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+
+                            female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                external_efficecy+
+                subjective_social_economic_status)
+
+tmod3 <- tmod1 %>% update(ability~.)
+tmod4 <- tmod2 %>% update(ability~.)
+
+tmod5 <- tmod1 %>% update(assertiveness~.)
+tmod6 <- tmod2 %>% update(assertiveness~.)
+
+
+sjPlot::tab_model(tmod1,tmod2,
+                  tmod3,tmod4,
+                  tmod5,tmod6,
+                  collapse.ci = T)
+```
+
+```{r}
+responses %>% 
+  filter(entity=="civil servants",morality==1) %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=response_direction))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  theme_blank()+
+  labs(title="Civil servants - Morality")
+
+responses %>% 
+  filter(entity=="civil servants",ability==1) %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=response_direction))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  theme_blank()+
+  labs(title="Civil servants - Ability")
+
+responses %>% 
+  filter(entity=="civil servants",assertiveness==1) %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=response_direction))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  theme_blank()+
+  labs(title="Civil servants - Assertiveness")
+
+```
+
+```{r}
+tmod1 <- lme4::lmer(response_direction~populist_attitudes_index_3dim + (1|pid.x),data=responses %>% filter(entity=="civil servants",morality==1) %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+
+                            female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                external_efficecy+
+                subjective_social_economic_status)
+
+sjPlot::tab_model(tmod1,tmod2,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+## Junior civil servants
+
+```{r}
+responses %>% 
+  filter(entity=="junior civil servants") %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=morality))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  theme_blank()
+
+responses %>% 
+  filter(entity=="junior civil servants") %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=ability))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  theme_blank()
+
+```
+
+```{r}
+tmod1 <- lme4::glmer(morality~populist_attitudes_index_3dim + (1|pid.x),family="binomial" ,data=responses %>% filter(entity=="junior civil servants") %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+
+                            female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                external_efficecy+
+                subjective_social_economic_status)
+
+tmod3 <- tmod1 %>% update(ability~.)
+tmod4 <- tmod2 %>% update(ability~.)
+
+tmod5 <- tmod1 %>% update(assertiveness~.)
+tmod6 <- tmod2 %>% update(assertiveness~.)
+
+
+sjPlot::tab_model(tmod1,tmod2,
+                  tmod3,tmod4,
+                  tmod5,tmod6,
+                  collapse.ci = T)
+```
+
+```{r}
+responses %>% 
+  filter(entity=="junior civil servants",morality==1) %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=response_direction))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  theme_blank()+
+  labs(title="Junior civil servants - Morality")
+
+responses %>% 
+  filter(entity=="junior civil servants",ability==1) %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=response_direction))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  theme_blank()+
+  labs(title="Junior civil servants - Ability")
+
+
+responses %>% 
+  filter(entity=="junior civil servants",assertiveness==1) %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=response_direction))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  theme_blank()+
+  labs(title="Junior civil servants - Assertiveness")
+
+```
+
+```{r}
+tmod1 <- lm(response_direction~populist_attitudes_index_3dim,data=responses %>% filter(entity=="junior civil servants",morality==1) %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+
+                            female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                external_efficecy+
+                subjective_social_economic_status)
+
+sjPlot::tab_model(tmod1,tmod2,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+```{r}
+tmod1 <- lm(response_direction~populist_attitudes_index_3dim,data=responses %>% filter(entity=="junior civil servants",ability==1) %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+
+                            female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                external_efficecy+
+                subjective_social_economic_status)
+
+sjPlot::tab_model(tmod1,tmod2,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+```{r}
+tmod1 <- lm(response_direction~populist_attitudes_index_3dim,data=responses %>% filter(entity=="junior civil servants",assertiveness==1) %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+
+                            female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                external_efficecy+
+                subjective_social_economic_status)
+
+sjPlot::tab_model(tmod1,tmod2,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+## Senior civil servants
+
+```{r}
+responses %>% 
+  filter(entity=="senior civil servants") %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=morality))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  theme_blank()
+
+responses %>% 
+  filter(entity=="senior civil servants") %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=ability))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  theme_blank()
+
+responses %>% 
+  filter(entity=="senior civil servants") %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=assertiveness))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  theme_blank()
+```
+
+```{r}
+tmod1 <- lm(morality~populist_attitudes_index_3dim,family="binomial",data=responses %>% filter(entity=="senior civil servants") %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+
+                            female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                external_efficecy+
+                subjective_social_economic_status)
+
+tmod3 <- tmod1 %>% update(ability~.)
+tmod4 <- tmod2 %>% update(ability~.)
+
+tmod5 <- tmod1 %>% update(assertiveness~.)
+tmod6 <- tmod2 %>% update(assertiveness~.)
+
+
+sjPlot::tab_model(tmod1,tmod2,
+                  tmod3,tmod4,
+                  tmod5,tmod6,
+                  collapse.ci = T)
+```
+
+```{r}
+responses %>% 
+  filter(entity=="senior civil servants",morality==1) %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=response_direction))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  theme_blank()+
+  labs(title="Senior civil servants - Morality")
+
+responses %>% 
+  filter(entity=="senior civil servants",ability==1) %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=response_direction))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  theme_blank()+
+  labs(title="Senior civil servants - Ability")
+
+
+responses %>% 
+  filter(entity=="senior civil servants",assertiveness==1) %>% 
+  ggplot(aes(x=populist_attitudes_index_3dim,y=response_direction))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  theme_blank()+
+  labs(title="Senior civil servants - Assertiveness")
+
+```
+
+```{r}
+tmod1 <- lm(response_direction~populist_attitudes_index_3dim,data=responses %>% filter(entity=="senior civil servants",ability==1) %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+
+                            female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                external_efficecy+
+                subjective_social_economic_status)
+
+sjPlot::tab_model(tmod1,tmod2,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+```{r}
+tmod1 <- lm(response_direction~populist_attitudes_index_3dim,data=responses %>% filter(entity=="senior civil servants",assertiveness==1) %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(.~.+
+                            female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                external_efficecy+
+                subjective_social_economic_status)
+
+sjPlot::tab_model(tmod1,tmod2,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+# Responses
+
+## By dimension
+
+Morality
+
+```{r}
+responses %>%
+  filter(morality==1)%>%   
+  group_by(response) %>% 
+  summarise(n=n(),
+            direction = mean(response_direction,na.rm=T) %>% round(1),
+            populist_attitudes_index_3dim = mean(populist_attitudes_index_3dim,na.rm=T) %>% round(2)) %>% 
+  filter(n>4) %>% 
+  arrange(n %>% desc()) %>% 
+  gt::gt()
+
+```
+
+```{r}
+responses %>%
+  filter(morality==1)%>%   
+  group_by(`manual translation`) %>% 
+  summarise(n=n(),
+            direction = mean(response_direction,na.rm=T) %>% round(1)) %>% 
+  filter(n>4) %>% 
+  arrange(n %>% desc()) %>% 
+  gt::gt()
+
+
+```
+
+Ability
+
+```{r}
+responses %>%
+  filter(ability==1)%>%   
+  group_by(response) %>% 
+  summarise(n=n(),
+            direction = mean(response_direction,na.rm=T) %>% round(1),
+            populist_attitudes_index_3dim = mean(populist_attitudes_index_3dim,na.rm=T) %>% round(2)) %>% 
+  filter(n>4) %>% 
+  arrange(n %>% desc()) %>% 
+  gt::gt()
+
+```
+
+```{r}
+responses %>%
+  filter(ability==1)%>%   
+  group_by(`manual translation`) %>% 
+  summarise(n=n(),
+            direction = mean(response_direction,na.rm=T) %>% round(1)) %>% 
+  filter(n>4) %>% 
+  arrange(n %>% desc()) %>% 
+  gt::gt()
+
+
+```
+
+Assertiveness
+
+```{r}
+responses %>%
+  filter(assertiveness==1)%>%   
+  group_by(response) %>% 
+  summarise(n=n(),
+            direction = mean(response_direction,na.rm=T) %>% round(1),
+            populist_attitudes_index_3dim = mean(populist_attitudes_index_3dim,na.rm=T) %>% round(2)) %>% 
+  filter(n>4) %>% 
+  arrange(n %>% desc()) %>% 
+  gt::gt()
+
+```
+
+```{r}
+responses %>%
+  filter(entity=="senior civil servants")%>%   
+  group_by(`manual translation`) %>% 
+  summarise(n=n(),
+            direction = mean(response_direction,na.rm=T) %>% round(1)) %>% 
+  filter(n>4) %>% 
+  arrange(n %>% desc()) %>% 
+  gt::gt()
+
+
+```
+
+Status
+
+```{r}
+responses %>%
+  filter(beliefs==1)%>%   
+  group_by(response) %>% 
+  summarise(n=n(),
+            direction = mean(response_direction,na.rm=T) %>% round(1),
+            populist_attitudes_index_3dim = mean(populist_attitudes_index_3dim,na.rm=T) %>% round(2)) %>% 
+  filter(n>4) %>% 
+  arrange(n %>% desc()) %>% 
+  gt::gt()
+
+```
+
+## By entity
+
+Civil servants
+
+```{r}
+responses %>%
+  filter(entity=="civil servants")%>%   
+  group_by(response) %>% 
+  summarise(n=n(),
+            direction = mean(response_direction,na.rm=T) %>% round(1),
+            populist_attitudes_index_3dim = mean(populist_attitudes_index_3dim,na.rm=T) %>% round(2)) %>% 
+  filter(n>2) %>% 
+  arrange(n %>% desc()) %>% 
+  gt::gt()
+
+```
+
+First response
+
+```{r}
+responses %>%
+  filter(entity=="civil servants",response_order==1)%>%   
+  group_by(response) %>% 
+  summarise(n=n(),
+            direction = mean(response_direction,na.rm=T) %>% round(1),
+            populist_attitudes_index_3dim = mean(populist_attitudes_index_3dim,na.rm=T) %>% round(2)) %>% 
+  filter(n>4) %>% 
+  arrange(n %>% desc()) %>% 
+  gt::gt()
+
+```
+
+Senior civil servants
+
+```{r}
+responses %>%
+  filter(entity=="senior civil servants",response_order==1)%>%   
+  group_by(response) %>% 
+  summarise(n=n(),
+            direction = mean(response_direction,na.rm=T) %>% round(1),
+            populist_attitudes_index_3dim = mean(populist_attitudes_index_3dim,na.rm=T) %>% round(2)) %>% 
+  filter(n>4) %>% 
+  arrange(n %>% desc()) %>% 
+  gt::gt()
+
+```
+
+# Prototype
+
+```{r}
+responses %>%
+  filter(entity=="civil servants") %>%  
+  distinct(pid.x,.keep_all = T) %>% 
+  group_by(imagined_entity) %>% 
+  summarise(n=n(),
+            direction = mean(response_direction,na.rm=T) %>% round(1),
+            populist_attitudes_index_3dim = mean(populist_attitudes_index_3dim,na.rm=T) %>% round(2)) %>% 
+  arrange(n %>% desc()) %>% 
+  gt::gt()
+
+```
+
+```{r}
+entities <- responses %>% 
+  dplyr::distinct(response_id,pid.x,entity,imagined_entity_code_detailed,imagined_entity) %>% left_join(pilot) %>% 
+  mutate(imagined_entity_code_detailed = imagined_entity_code_detailed %>% as.factor() %>% 
+           dplyr::recode('4'="4. Junior",
+                         '5'="5. Senior",
+                         '6'="6. Mixed",
+                         '7'="7. Public service organization",
+                         '8'="8. National level ministry",
+                         '12'="12. Politician",
+                         '13'="13. NA"))
+```
+
+```{r}
+entities %>% 
+  dplyr::select(entity,
+                imagined_entity_code_detailed) %>% 
+  tbl_summary(by=entity)
+```
+
+```{r}
+entities %>%
+  filter(entity=="civil servants") %>% 
+  group_by(imagined_entity_code_detailed) %>%
+  mutate(mean_pop = mean(populist_attitudes_index_3dim, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot(aes(x = imagined_entity_code_detailed, y = populist_attitudes_index_3dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes Index",
+    title = "Populist Attitudes by imagined entity (civil servants)"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+responses %>%
+  filter(entity=="junior civil servants") %>%  
+  distinct(pid.x,.keep_all = T) %>% 
+  group_by(imagined_entity) %>% 
+  summarise(n=n(),
+            direction = mean(response_direction,na.rm=T) %>% round(1),
+            populist_attitudes_index_3dim = mean(populist_attitudes_index_3dim,na.rm=T) %>% round(2)) %>% 
+  arrange(n %>% desc()) %>% 
+  gt::gt()
+
+```
+
+```{r}
+entities %>%
+  filter(entity=="junior civil servants",
+         !imagined_entity_code_detailed%in% c("1","2","3","9","8. National level ministry")) %>% 
+  group_by(imagined_entity_code_detailed) %>%
+  mutate(mean_pop = mean(populist_attitudes_index_3dim, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot(aes(x = imagined_entity_code_detailed, y = populist_attitudes_index_3dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes Index",
+    title = "Populist Attitudes by imagined entity (junior civil servants)"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+responses %>%
+  filter(entity=="senior civil servants") %>%  
+  distinct(pid.x,.keep_all = T) %>% 
+  group_by(imagined_entity) %>% 
+  summarise(n=n(),
+            direction = mean(response_direction,na.rm=T) %>% round(1),
+            populist_attitudes_index_3dim = mean(populist_attitudes_index_3dim,na.rm=T) %>% round(2)) %>% 
+  arrange(n %>% desc()) %>% 
+  gt::gt()
+
+```
+
+```{r}
+entities %>%
+  filter(entity=="senior civil servants",
+         !imagined_entity_code_detailed%in% c("1","9","7. Public service organization")) %>% 
+  group_by(imagined_entity_code_detailed) %>%
+  mutate(mean_pop = mean(populist_attitudes_index_3dim, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot(aes(x = imagined_entity_code_detailed, y = populist_attitudes_index_3dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes Index",
+    title = "Populist Attitudes by imagined entity (senior civil servants)"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+responses %>% 
+  filter(entity=="civil servants") %>% 
+  dplyr::select(imagined_entity,
+                response,
+                response_direction,
+                populist_attitudes_index_3dim) %>% 
+  arrange(populist_attitudes_index_3dim %>% desc())
+```
+
+```{r}
+responses$populist_attitudes_index_4dim
+
+responses %>% 
+  filter(morality==1) %>% 
+  ggplot(aes(x=right_left_ideology,y=populist_attitudes_index_4dim))+
+  geom_text(aes(label = imagined_entity,colour = response_direction),size=2,position = position_jitter())+
+  geom_smooth(method="lm")+
+  theme_classic()
+
+
+  
+```
+
+```{r}
+pilot2 %>% count(civil_servant_label)
+```
