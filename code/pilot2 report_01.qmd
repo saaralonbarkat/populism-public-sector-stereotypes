@@ -461,6 +461,8 @@ coord_flip() +
   theme_minimal()
 ```
 
+
+
 #### Homogeneity
 
 ```{r}
@@ -530,13 +532,13 @@ pilot2 %>%
 
 ```{r}
 pilot2 %>%
-      dplyr::select(populist_attitudes_index_3dim,
+      dplyr::select(populist_attitudes_index_4dim,
       anti_elitism,
       homogeneity,
       popular_sovereignty,
       manichean,
       coalition_party_vote_intention) %>%
-        gtsummary::tbl_summary(by=coalition_party_vote_intention)
+        gtsummary::tbl_summary(statistic = list(all_continuous() ~ "{mean} ({sd})"),by=coalition_party_vote_intention)
 ```
 
 ### Correlations with other variables
@@ -961,7 +963,7 @@ pilot2 |>
 ```
 
 ```{r}
-model_1 <- lm(trust_civil_service ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels(),na.rm=T)
+model_1 <- lm(trust_civil_service ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels()|> filter(coalition_party_vote_intention!="Other"),na.rm=T)
 
 model_2 <- model_1 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
 
@@ -991,11 +993,11 @@ sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4di
 
 
 ```{r}
-##ggplot2 histogram of trust in civil service
+##ggplot2 histogram of trust in police
 
 pilot2 |> 
   labelled::remove_labels() |> 
-  ggplot(aes(x = trust_civil_service)) +
+  ggplot(aes(x = trust_police)) +
   geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
   facet_wrap(vars(coalition_party_vote_intention))+
   labs(
@@ -1021,6 +1023,35 @@ model_3 <- model_1 %>% update(.~.+
                 subjective_social_economic_status +
                 affective_polarization)
 model_4 <- model_3 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+model_5 <- lm(trust_police ~ populist_attitudes_index_4dim + right_left_ideology ,pilot2 %>% labelled::remove_labels() |> filter(coalition_party_vote_intention=="Netanyahu coalition"))
+
+
+sjPlot::tab_model(model_1,model_2,model_3,model_4,model_5,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+```{r}
+sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4dim", "coalition_party_vote_intention"))
+```
+
+
+
+```{r}
+model_1 <- lm(trust_police ~ anti_elitism + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels(),na.rm=T)
+
+model_2 <- model_1 %>% update(.~.+anti_elitism*(coalition_party_vote_intention+right_left_ideology))
+
+model_3 <- model_1 %>% update(.~.+ 
+  female +
+                age_group+
+                income+
+                education+
+                external_efficecy+
+                subjective_social_economic_status +
+                affective_polarization)
+model_4 <- model_3 %>% update(.~.+anti_elitism*(coalition_party_vote_intention+right_left_ideology))
 
 
 
@@ -1031,8 +1062,9 @@ sjPlot::tab_model(model_1,model_2,model_3,model_4,
 ```
 
 ```{r}
-sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4dim", "coalition_party_vote_intention"))
+sjPlot::plot_model(model_4,type = "pred",terms = c("anti_elitism", "coalition_party_vote_intention"))
 ```
+
 
 # Conspiracy
 
@@ -1083,7 +1115,7 @@ labs(x = NULL,
 
 ```{r}
 pilot2 %>% labelled::remove_labels() %>% 
-  dplyr::select(populist_attitudes_index_3dim,                popular_sovereignty:manichean,
+  dplyr::select(populist_attitudes_index_4dim,                popular_sovereignty:manichean,
 conspiracy_deep_state_n,conspiracy_vaccine_n) %>% 
   sjPlot::tab_corr(triangle = "lower")
 
@@ -1091,7 +1123,7 @@ conspiracy_deep_state_n,conspiracy_vaccine_n) %>%
 
 ```{r}
 pilot2 %>% labelled::remove_labels() %>% 
-  dplyr::select(populist_attitudes_index_3dim,                popular_sovereignty:manichean,
+  dplyr::select(populist_attitudes_index_4dim,                popular_sovereignty:manichean,
 conspiracy_deep_state_n,conspiracy_vaccine_n,
 trust_knesset:trust_media) %>% 
   sjPlot::tab_corr(triangle = "lower")
@@ -1104,7 +1136,7 @@ Correlations between trust and populist attitudes across partisanship
 pilot2 %>%
   labelled::remove_labels() %>%
   dplyr::select(
-    populist_attitudes_index_3dim,
+    populist_attitudes_index_4dim,
         popular_sovereignty:manichean,
     conspiracy_deep_state_n,
     conspiracy_vaccine_n,
@@ -1118,13 +1150,13 @@ pilot2 %>%
   filter(coalition_party_vote_intention == "Netanyahu coalition") %>%
   labelled::remove_labels() %>%
   dplyr::select(
-    populist_attitudes_index_3dim,populist_attitudes_index_4dim,
+    populist_attitudes_index_4dim,populist_attitudes_index_4dim,
         popular_sovereignty:manichean,
     conspiracy_deep_state_n,
     conspiracy_vaccine_n,
     trust_knesset:trust_media
   ) %>%
-  sjPlot::tab_corr(triangle = "lower", title = "Netanyahu coalition")
+  sjPlot::tab_corr(triangle = "lower", title = "Netanyahu coalition",p.numeric=TRUE)
 ```
 
 ```{r}
@@ -1132,20 +1164,20 @@ pilot2 %>%
   filter(coalition_party_vote_intention == "Anti Netanyahu coalition") %>%
   labelled::remove_labels() %>%
   dplyr::select(
-    populist_attitudes_index_3dim,populist_attitudes_index_4dim,
+    populist_attitudes_index_4dim,populist_attitudes_index_4dim,
         popular_sovereignty:manichean,
     conspiracy_deep_state_n,
     conspiracy_vaccine_n,
     trust_knesset:trust_media
   ) %>%
-  sjPlot::tab_corr(triangle = "lower", title = "Anti Netanyahu coalition")
+  sjPlot::tab_corr(triangle = "lower", title = "Anti Netanyahu coalition",p.numeric=TRUE)
 ```
 
 Models for deep state conspiracy belief
 
 
 ```{r}
-model_1 <- lm(conspiracy_deep_state_n ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels(),na.rm=T)
+model_1 <- lm(conspiracy_deep_state_n ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels()|> filter(coalition_party_vote_intention!="Other"),na.rm=T)
 
 model_2 <- model_1 %>% update(conspiracy_deep_state_n~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
 
@@ -1167,6 +1199,9 @@ sjPlot::tab_model(model_1,model_2,model_3,model_4,
                   collapse.ci = T)
 ```
 
+```{r}
+sjPlot::plot_model(model_2,type = "pred",terms = c("populist_attitudes_index_4dim", "coalition_party_vote_intention"))
+```
 
 Models for vaccine conspiracy belief
 
@@ -1218,6 +1253,19 @@ responses_pilot2 %>%
 
 ```
 
+```{r}
+#distribution of direction responses by coalition party vote intention
+
+responses_pilot2 %>% 
+  drop_na(coalition_party_vote_intention) %>%
+  ggplot(aes(x=response_direction,fill=coalition_party_vote_intention))+
+  geom_bar(position = "dodge")+
+  labs(title="All responses by coalition party vote intention")
+
+
+```
+
+
 Civil servants
 
 ```{r}
@@ -1262,11 +1310,120 @@ responses_pilot2 %>%
 
 ```{r}
 responses_pilot2 %>% 
+  drop_na(civil_servant_label) %>%
 #filter(civil_servant_label!="public service bureaucrat") %>% 
-  ggplot(aes(x=populist_attitudes_index_3dim,y=response_direction))+
+  ggplot(aes(x=populist_attitudes_index_4dim,y=response_direction))+
   geom_point()+
   geom_smooth(method="lm")+
   facet_wrap(vars(civil_servant_label))+
+  theme_blank()
+  
+```
+
+Only coalition
+```{r}
+responses_pilot2 %>% 
+  drop_na(civil_servant_label) %>%
+  filter(coalition_party_vote_intention=="Netanyahu coalition") %>%
+#filter(civil_servant_label!="public service bureaucrat") %>% 
+  ggplot(aes(x=populist_attitudes_index_4dim,y=response_direction))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  #facet_wrap(vars(civil_servant_label))+
+   labs(title="Only coalition party voters")+
+  theme_blank()
+  
+```
+
+
+Only opposition
+```{r}
+responses_pilot2 %>% 
+  drop_na(civil_servant_label) %>%
+  filter(coalition_party_vote_intention=="Anti Netanyahu coalition") %>%
+#filter(civil_servant_label!="public service bureaucrat") %>% 
+  ggplot(aes(x=populist_attitudes_index_4dim,y=response_direction))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  #facet_wrap(vars(civil_servant_label))+
+   labs(title="Only Anti netanyahu coalition party voters")+
+  theme_blank()
+  
+```
+
+
+```{r}
+# regression model for direction by populist attitudes index and civil servant type
+tmod1 <- lme4::lmer(
+  response_direction ~ populist_attitudes_index_4dim +
+    coalition_party_vote_intention +
+    civil_servant_label +
+    (1 | pid.x),
+  data = responses_pilot2 %>% labelled::remove_labels()
+)
+tmod2 <- tmod1 %>%
+  update(. ~ . + populist_attitudes_index_4dim * coalition_party_vote_intention)
+tmod3 <- tmod2 %>%
+  update(
+    . ~ . +
+      female +
+      age_group +
+      income +
+      education +
+      external_efficecy +
+      subjective_social_economic_status +
+      affective_polarization
+  )
+
+sjPlot::tab_model(tmod1, tmod2,  show.est = F, show.std = T, collapse.ci = T)
+```
+
+
+
+
+By dimension
+
+Morality
+```{r}
+responses_pilot2 %>% 
+  drop_na(civil_servant_label) %>%
+  filter(morality==1) %>%
+#filter(civil_servant_label!="public service bureaucrat") %>% 
+  ggplot(aes(x=populist_attitudes_index_4dim,y=response_direction))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  facet_wrap(vars(civil_servant_label))+
+  labs(title="Morality - All")+
+  theme_blank()
+  
+```
+
+```{r}
+responses_pilot2 %>% 
+  drop_na(civil_servant_label) %>%
+  filter(morality==1,
+  coalition_party_vote_intention=="Netanyahu coalition") %>%
+#filter(civil_servant_label!="public service bureaucrat") %>% 
+  ggplot(aes(x=populist_attitudes_index_4dim,y=response_direction))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  #facet_wrap(vars(civil_servant_label))+
+    labs(title="Morality - Netanyahu coalition")+
+  theme_blank()
+  
+```
+
+```{r}
+responses_pilot2 %>% 
+  drop_na(civil_servant_label) %>%
+  filter(morality==1,
+  coalition_party_vote_intention=="Anti Netanyahu coalition") %>%
+#filter(civil_servant_label!="public service bureaucrat") %>% 
+  ggplot(aes(x=populist_attitudes_index_4dim,y=response_direction))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  #facet_wrap(vars(civil_servant_label))+
+    labs(title="Morality - Anti Netanyahu coalition")+
   theme_blank()
   
 ```
@@ -1904,8 +2061,8 @@ coord_flip() +
 ```
 
 ```{r}
-responses %>%
-  filter(entity=="senior civil servants") %>%  
+responses_pilot2 %>%
+  filter(coalition_party_vote_intention=="Netanyahu coalition") %>%  
   distinct(pid.x,.keep_all = T) %>% 
   group_by(imagined_entity) %>% 
   summarise(n=n(),
@@ -1947,15 +2104,36 @@ responses %>%
 ```
 
 ```{r}
-responses$populist_attitudes_index_4dim
 
-responses %>% 
-  filter(morality==1) %>% 
-  ggplot(aes(x=right_left_ideology,y=populist_attitudes_index_4dim))+
-  geom_text(aes(label = imagined_entity,colour = response_direction),size=2,position = position_jitter())+
+p1 <- responses_pilot2 %>% 
+  filter(coalition_party_vote_intention=="Netanyahu coalition") %>%
+  ggplot(aes(x=populist_attitudes_index_4dim,y=response_direction))+
+  geom_text(aes(label = response,color=morality |> as_factor()),size=1.5,position = position_jitter())+
   geom_smooth(method="lm")+
+  labs(title="Only coalition party voters")+
   theme_classic()
 
+p1 
+
+ggsave(p1,filename = "plots/coalition_responses.png",width=20,height=12,units="cm",dpi=300)
+
+  
+```
+
+
+```{r}
+
+p2 <- responses_pilot2 %>% 
+  filter(coalition_party_vote_intention=="Anti Netanyahu coalition") %>%
+  ggplot(aes(x=populist_attitudes_index_4dim,y=response_direction))+
+  geom_text(aes(label = response,color=morality |> as_factor()),size=1.5,position = position_jitter())+
+  geom_smooth(method="lm")+
+  labs(title="Only Anti coalition party voters")+
+  theme_classic()
+
+p2 
+
+ggsave(p2,filename = "plots/Anti coalition_responses.png",width=20,height=12,units="cm",dpi=300)
 
   
 ```
