@@ -31,6 +31,96 @@ Import data
 load(".RData")
 ```
 
+
+# sample
+
+```{r}
+# יצירת labels למשתנים
+pilot2_labs <- pilot2 %>% remove_labels() %>%
+  mutate(
+    gender_label = case_when(
+      gender == 1 ~ "Male",
+      gender == 2 ~ "Female",
+      gender == 3 ~ "Other",
+      TRUE ~ NA_character_
+    ),
+    age_group_label = case_when(
+      age_group == 1 ~ "18-24",
+      age_group == 2 ~ "25-34",
+      age_group == 3 ~ "35-44",
+      age_group == 4 ~ "45-54",
+      age_group == 5 ~ "55-64",
+      age_group == 6 ~ "65+",
+      TRUE ~ NA_character_
+    ),
+    education_label = case_when(
+      education == 1 ~ "1.Elementary or less",
+      education == 2 ~ "2.No high school disploma",
+      education == 3 ~ "3.High school disploma",
+      education == 4 ~ "4.Post high school",
+      education == 5 ~ "5.College education (no degree)",
+      education == 6 ~ "6.Bachelor's degree",
+      education == 7 ~ "7.Master's degree",
+      education == 8 ~ "8.Doctorate degree",
+      TRUE ~ NA_character_
+    ),
+    income_label = case_when(
+      income == 1 ~ "1.Much below average",
+      income == 2 ~ "2.Below average",
+      income == 3 ~ "3.Average",
+      income == 4 ~ "4.Above average",
+      income == 5 ~ "5.Much above average",
+      TRUE ~ NA_character_
+    ),
+    sector_employment_label = case_when(
+      sector_employment == 1 ~ "Public sector",
+      sector_employment == 2 ~ "Private sector",
+      sector_employment == 3 ~ "Third sector",
+      sector_employment == 4 ~ "Self-employed",
+      sector_employment == 5 ~ "Not employed",
+      sector_employment == 6 ~ "Other",
+      TRUE ~ NA_character_
+    ),
+    religiosity_label = case_when(
+      religiosity == 1 ~ "5.Ultra Orthodox (Charedi)",
+      religiosity == 3 ~ "4.Religious",
+      religiosity == 4 ~ "3.Traditional religious",
+      religiosity == 5 ~ "2.Traditional not religious",
+      religiosity == 6 ~ "1.Secular",
+      TRUE ~ NA_character_
+    )
+  )
+
+```
+
+```{r}
+# בחירת משתנים דמוגרפיים
+pilot2_labs %>%
+  dplyr::select(gender_label, age_group_label, religiosity_label,education_label, income_label, 
+         sector_employment_label, public_sector_employee_current, 
+         public_sector_experience, right_left_ideology,coalition_party_vote_intention,
+         ) %>%
+  tbl_summary(
+    label = list(
+      gender_label ~ "Gender",
+      age_group_label ~ "Age Group",
+      religiosity_label ~ "Religiosity",
+      education_label ~ "Education",
+      income_label ~ "Income (relative to average)",
+      sector_employment_label ~ "Employment Sector",
+      public_sector_employee_current ~ "Currently employed in public sector",
+      public_sector_experience ~ "Any public sector experience",
+      right_left_ideology ~ "Right-Left Ideology (1=extreme right, 7=extreme left)"
+    ),
+    missing_text = "Missing"
+  ) %>%
+  modify_caption("**Table 1. Sample Demographics**") %>%
+  bold_labels()
+
+```
+
+
+
 # Populist attitudes
 
 **popular sovereignty**
@@ -245,6 +335,71 @@ pilot2 %>%
 GGally::ggpairs()
 ```
 
+
+## INDEX
+
+```{r}
+pilot2 <- pilot2 |> 
+  mutate(
+    populist_attitudes_index_4dim_multiplication = (popular_sovereignty*anti_elitism*homogeneity*manichean),
+    populist_attitudes_index_4dim_minimum = pmin(scale(popular_sovereignty),scale(anti_elitism),scale(homogeneity),scale(manichean)) |> scale(),
+    populist_attitudes_index_3dim_minimum = pmin(scale(popular_sovereignty),scale(anti_elitism),scale(homogeneity)) |> scale()
+    )
+```
+
+)
+
+```{r}
+min(pilot2$populist_attitudes_index_4dim_minimum)
+max(pilot2$populist_attitudes_index_4dim_minimum)
+hist(pilot2$populist_attitudes_index_4dim_minimum)
+```
+
+
+```{r}
+#ggplot2 histograms populist_attitudes_index_4dim and populist_attitudes_index_4dim_multiplication
+
+pilot2 |> 
+  ggplot(aes(x = populist_attitudes_index_4dim)) +
+  geom_histogram(binwidth = 0.1, fill = "blue", color = "black", alpha = 0.7) +
+  labs(
+    x = "Populist Attitudes Index (4 dimensions)",
+    y = "Count",
+    title = "Distribution of Populist Attitudes Index (4 dimensions)"
+  ) +
+  theme_minimal()
+
+
+pilot2 |> 
+  ggplot(aes(x = populist_attitudes_index_4dim_multiplication)) +
+  geom_histogram(binwidth = 0.1, fill = "blue", color = "black", alpha = 0.7) +
+  labs(
+    x = "Populist Attitudes Index (4 dimensions) multiplication",
+    y = "Count",
+    title = "Distribution of Populist Attitudes Index (4 dimensions)"
+  ) +
+  theme_minimal()
+
+pilot2 |> 
+  ggplot(aes(x = populist_attitudes_index_4dim_minimum)) +
+  geom_histogram(fill = "blue", color = "black", alpha = 0.7) +
+  labs(
+    x = "Populist Attitudes Index (4 dimensions) multiplication",
+    y = "Count",
+    title = "Distribution of Populist Attitudes Index (4 dimensions)"
+  ) +
+  theme_minimal()
+
+
+```
+
+```{r}
+pilot2 |> 
+  ggplot(aes(x = populist_attitudes_index_4dim ,y= populist_attitudes_index_4dim_minimum)) +
+  geom_point(alpha=0.2)+
+  theme_minimal()
+```
+
 ## Populist attitudes and partisanship
 
 ```{r}
@@ -254,7 +409,7 @@ pilot2 %>%
     party_vote_past = labelled::to_factor(party_vote_past)
   ) %>%
   group_by(party_vote_past) %>%
-  mutate(mean_pop = mean(populist_attitudes_index_3dim, na.rm = TRUE)) %>%
+  mutate(mean_pop = mean(populist_attitudes_index_4dim, na.rm = TRUE)) %>%
   ungroup() %>%
   mutate(party_vote_past = fct_reorder(party_vote_past, mean_pop)) %>%
   ggplot(aes(x = party_vote_past, y = populist_attitudes_index_4dim)) +
@@ -281,14 +436,60 @@ pilot2 %>%
   mutate(mean_pop = mean(populist_attitudes_index_4dim, na.rm = TRUE)) %>%
   ungroup() %>%
   mutate(party_vote_intention = fct_reorder(party_vote_intention, mean_pop)) %>%
-  ggplot(aes(x = party_vote_intention, y = populist_attitudes_index_3dim)) +
+  ggplot(aes(x = party_vote_intention, y = populist_attitudes_index_4dim)) +
   geom_point(alpha=0.2) +
   stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
       stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
 coord_flip() +
   labs(
     x = NULL,
-    y = "Populist Attitudes Index (3 dimensions)",
+    y = "Populist Attitudes Index (4 dimensions)",
+    title = "Populist Attitudes by Voting Intention"
+  ) +
+  theme_minimal()
+
+
+
+pilot2 %>%
+    filter(party_vote_intention!=9) %>% 
+  drop_na(party_vote_intention) %>% 
+  mutate(
+    party_vote_intention = labelled::to_factor(party_vote_intention)
+  ) %>%
+  group_by(party_vote_intention) %>%
+  mutate(mean_pop = mean(populist_attitudes_index_3dim_minimum, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_intention = fct_reorder(party_vote_intention, mean_pop)) %>%
+  ggplot(aes(x = party_vote_intention, y = populist_attitudes_index_3dim_minimum)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes Index (3 dimensions) minimum",
+    title = "Populist Attitudes by Voting Intention"
+  ) +
+  theme_minimal()
+
+pilot2 %>%
+    filter(party_vote_intention!=9) %>% 
+  drop_na(party_vote_intention) %>% 
+  mutate(
+    party_vote_intention = labelled::to_factor(party_vote_intention)
+  ) %>%
+  group_by(party_vote_intention) %>%
+  mutate(mean_pop = mean(populist_attitudes_index_4dim_multiplication, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_intention = fct_reorder(party_vote_intention, mean_pop)) %>%
+  ggplot(aes(x = party_vote_intention, y = populist_attitudes_index_4dim_multiplication)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist Attitudes Index (4 dimensions) multiplication",
     title = "Populist Attitudes by Voting Intention"
   ) +
   theme_minimal()
@@ -297,7 +498,7 @@ coord_flip() +
 ```{r}
 pilot2 %>%
   drop_na(right_left_ideology) %>% 
-  ggplot(aes(x = right_left_ideology %>% labelled::to_factor(), y = populist_attitudes_index_3dim)) +
+  ggplot(aes(x = right_left_ideology %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
   geom_point(alpha=0.2) +
   stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
       stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
@@ -530,6 +731,10 @@ pilot2 %>%
 ```
 
 
+
+
+
+
 ```{r}
 pilot2 %>%
       dplyr::select(populist_attitudes_index_4dim,
@@ -677,8 +882,8 @@ hist(t1$affective_delta)
 ```
 
 ```{r}
-t1 %>%
-  drop_na(affective_delta) %>% 
+pilot2 %>%
+  drop_na(delta) %>% 
   ggplot(aes(x = affective_delta %>% labelled::to_factor(), y = populist_attitudes_index_3dim)) +
   geom_jitter() +
   stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
@@ -714,6 +919,8 @@ coord_flip() +
 pilot2 %>% 
   dplyr::select(populist_attitudes_index_4dim,
                 populist_attitudes_index_3dim,
+                populist_attitudes_index_4dim_minimum,
+                populist_attitudes_index_4dim_multiplication,
                 popular_sovereignty:manichean,
                 female,
                 age_group,
@@ -1136,7 +1343,7 @@ Correlations between trust and populist attitudes across partisanship
 pilot2 %>%
   labelled::remove_labels() %>%
   dplyr::select(
-    populist_attitudes_index_4dim,
+    populist_attitudes_index_4dim,populist_attitudes_index_4dim_minimum, 
         popular_sovereignty:manichean,
     conspiracy_deep_state_n,
     conspiracy_vaccine_n,
@@ -1150,7 +1357,7 @@ pilot2 %>%
   filter(coalition_party_vote_intention == "Netanyahu coalition") %>%
   labelled::remove_labels() %>%
   dplyr::select(
-    populist_attitudes_index_4dim,populist_attitudes_index_4dim,
+    populist_attitudes_index_4dim,populist_attitudes_index_4dim,populist_attitudes_index_4dim_minimum, 
         popular_sovereignty:manichean,
     conspiracy_deep_state_n,
     conspiracy_vaccine_n,
@@ -1164,7 +1371,7 @@ pilot2 %>%
   filter(coalition_party_vote_intention == "Anti Netanyahu coalition") %>%
   labelled::remove_labels() %>%
   dplyr::select(
-    populist_attitudes_index_4dim,populist_attitudes_index_4dim,
+    populist_attitudes_index_4dim,populist_attitudes_index_4dim,populist_attitudes_index_4dim_minimum, 
         popular_sovereignty:manichean,
     conspiracy_deep_state_n,
     conspiracy_vaccine_n,
@@ -1320,6 +1527,18 @@ responses_pilot2 %>%
   
 ```
 
+```{r}
+responses_pilot2 %>% 
+  drop_na(civil_servant_label) %>%
+#filter(civil_servant_label!="public service bureaucrat") %>% 
+  ggplot(aes(x=populist_attitudes_index_4dim,y=response_direction,color=coalition_party_vote_intention))+
+  geom_jitter(alpha=0.6)+
+  facet_wrap(vars(civil_servant_label))+
+  geom_smooth(method="lm")+
+  theme_blank()
+  
+```
+
 Only coalition
 ```{r}
 responses_pilot2 %>% 
@@ -1389,10 +1608,10 @@ responses_pilot2 %>%
   drop_na(civil_servant_label) %>%
   filter(morality==1) %>%
 #filter(civil_servant_label!="public service bureaucrat") %>% 
-  ggplot(aes(x=populist_attitudes_index_4dim,y=response_direction))+
+  ggplot(aes(x=populist_attitudes_index_4dim_minimum,y=response_direction,color=coalition_party_vote_intention))+
   geom_point()+
   geom_smooth(method="lm")+
-  facet_wrap(vars(civil_servant_label))+
+  #facet_wrap(vars(civil_servant_label))+
   labs(title="Morality - All")+
   theme_blank()
   
@@ -1416,6 +1635,22 @@ responses_pilot2 %>%
 ```{r}
 responses_pilot2 %>% 
   drop_na(civil_servant_label) %>%
+  filter(ability==1,
+  coalition_party_vote_intention=="Netanyahu coalition") %>%
+#filter(civil_servant_label!="public service bureaucrat") %>% 
+  ggplot(aes(x=populist_attitudes_index_4dim,y=response_direction))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  #facet_wrap(vars(civil_servant_label))+
+    labs(title="Ability - Netanyahu coalition")+
+  theme_blank()
+  
+```
+
+
+```{r}
+responses_pilot2 %>% 
+  drop_na(civil_servant_label) %>%
   filter(morality==1,
   coalition_party_vote_intention=="Anti Netanyahu coalition") %>%
 #filter(civil_servant_label!="public service bureaucrat") %>% 
@@ -1427,6 +1662,24 @@ responses_pilot2 %>%
   theme_blank()
   
 ```
+
+
+```{r}
+responses_pilot2 %>% 
+  drop_na(civil_servant_label) %>%
+  #filter(civil_servant_label!="public service bureaucrat") %>% 
+  ggplot(aes(x=populist_attitudes_index_4dim,y=morality,color=coalition_party_vote_intention))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  #facet_wrap(vars(civil_servant_label))+
+    labs(title="Morality")+
+  theme_blank()
+  
+```
+
+
+
+
 
 Civil servants
 
@@ -1448,45 +1701,29 @@ sjPlot::tab_model(tmod1,tmod2,
 
 ```
 
-Junior civil servants
+
+
+
+Deep state conspiracy belief and response direction for civil servants
 
 ```{r}
-tmod1 <- lme4::lmer(response_direction~populist_attitudes_index_3dim + (1|pid.x),data=responses %>% filter(entity=="junior civil servants") %>% labelled::remove_labels())
-tmod2 <- tmod1 %>% update(.~.+
-                            female +
-                age_group+
-                income+
-                education+
-                right_left_ideology+
-                external_efficecy+
-                subjective_social_economic_status)
+responses_pilot2 %>% 
+  drop_na(civil_servant_label) %>%
+  filter(morality==1) |> 
+  #coalition_party_vote_intention=="Netanyahu coalition") %>%
+#filter(civil_servant_label!="public service bureaucrat") %>% 
+  ggplot(aes(x=conspiracy_deep_state_n,y=response_direction,color=coalition_party_vote_intention))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  facet_wrap(vars(civil_servant_label))+
+ #   labs(title="Morality - Netanyahu coalition")+
+  theme_blank()
+  
 
-sjPlot::tab_model(tmod1,tmod2,
-                  show.est = F,
-                  show.std = T,
-                  collapse.ci = T)
 
 ```
 
-Senior civil servants
 
-```{r}
-tmod1 <- lme4::lmer(response_direction~populist_attitudes_index_3dim + (1|pid.x),data=responses %>% filter(entity=="senior civil servants") %>% labelled::remove_labels())
-tmod2 <- tmod1 %>% update(.~.+
-                            female +
-                age_group+
-                income+
-                education+
-                right_left_ideology+
-                external_efficecy+
-                subjective_social_economic_status)
-
-sjPlot::tab_model(tmod1,tmod2,
-                  show.est = F,
-                  show.std = T,
-                  collapse.ci = T)
-
-```
 
 ## Civil servants
 
@@ -1590,238 +1827,6 @@ sjPlot::tab_model(tmod1,tmod2,
                   collapse.ci = T)
 ```
 
-## Junior civil servants
-
-```{r}
-responses %>% 
-  filter(entity=="junior civil servants") %>% 
-  ggplot(aes(x=populist_attitudes_index_3dim,y=morality))+
-  geom_point()+
-  geom_smooth(method="lm")+
-  theme_blank()
-
-responses %>% 
-  filter(entity=="junior civil servants") %>% 
-  ggplot(aes(x=populist_attitudes_index_3dim,y=ability))+
-  geom_point()+
-  geom_smooth(method="lm")+
-  theme_blank()
-
-```
-
-```{r}
-tmod1 <- lme4::glmer(morality~populist_attitudes_index_3dim + (1|pid.x),family="binomial" ,data=responses %>% filter(entity=="junior civil servants") %>% labelled::remove_labels())
-tmod2 <- tmod1 %>% update(.~.+
-                            female +
-                age_group+
-                income+
-                education+
-                right_left_ideology+
-                external_efficecy+
-                subjective_social_economic_status)
-
-tmod3 <- tmod1 %>% update(ability~.)
-tmod4 <- tmod2 %>% update(ability~.)
-
-tmod5 <- tmod1 %>% update(assertiveness~.)
-tmod6 <- tmod2 %>% update(assertiveness~.)
-
-
-sjPlot::tab_model(tmod1,tmod2,
-                  tmod3,tmod4,
-                  tmod5,tmod6,
-                  collapse.ci = T)
-```
-
-```{r}
-responses %>% 
-  filter(entity=="junior civil servants",morality==1) %>% 
-  ggplot(aes(x=populist_attitudes_index_3dim,y=response_direction))+
-  geom_point()+
-  geom_smooth(method="lm")+
-  theme_blank()+
-  labs(title="Junior civil servants - Morality")
-
-responses %>% 
-  filter(entity=="junior civil servants",ability==1) %>% 
-  ggplot(aes(x=populist_attitudes_index_3dim,y=response_direction))+
-  geom_point()+
-  geom_smooth(method="lm")+
-  theme_blank()+
-  labs(title="Junior civil servants - Ability")
-
-
-responses %>% 
-  filter(entity=="junior civil servants",assertiveness==1) %>% 
-  ggplot(aes(x=populist_attitudes_index_3dim,y=response_direction))+
-  geom_point()+
-  geom_smooth(method="lm")+
-  theme_blank()+
-  labs(title="Junior civil servants - Assertiveness")
-
-```
-
-```{r}
-tmod1 <- lm(response_direction~populist_attitudes_index_3dim,data=responses %>% filter(entity=="junior civil servants",morality==1) %>% labelled::remove_labels())
-tmod2 <- tmod1 %>% update(.~.+
-                            female +
-                age_group+
-                income+
-                education+
-                right_left_ideology+
-                external_efficecy+
-                subjective_social_economic_status)
-
-sjPlot::tab_model(tmod1,tmod2,
-                  show.est = F,
-                  show.std = T,
-                  collapse.ci = T)
-```
-
-```{r}
-tmod1 <- lm(response_direction~populist_attitudes_index_3dim,data=responses %>% filter(entity=="junior civil servants",ability==1) %>% labelled::remove_labels())
-tmod2 <- tmod1 %>% update(.~.+
-                            female +
-                age_group+
-                income+
-                education+
-                right_left_ideology+
-                external_efficecy+
-                subjective_social_economic_status)
-
-sjPlot::tab_model(tmod1,tmod2,
-                  show.est = F,
-                  show.std = T,
-                  collapse.ci = T)
-```
-
-```{r}
-tmod1 <- lm(response_direction~populist_attitudes_index_3dim,data=responses %>% filter(entity=="junior civil servants",assertiveness==1) %>% labelled::remove_labels())
-tmod2 <- tmod1 %>% update(.~.+
-                            female +
-                age_group+
-                income+
-                education+
-                right_left_ideology+
-                external_efficecy+
-                subjective_social_economic_status)
-
-sjPlot::tab_model(tmod1,tmod2,
-                  show.est = F,
-                  show.std = T,
-                  collapse.ci = T)
-```
-
-## Senior civil servants
-
-```{r}
-responses %>% 
-  filter(entity=="senior civil servants") %>% 
-  ggplot(aes(x=populist_attitudes_index_3dim,y=morality))+
-  geom_point()+
-  geom_smooth(method="lm")+
-  theme_blank()
-
-responses %>% 
-  filter(entity=="senior civil servants") %>% 
-  ggplot(aes(x=populist_attitudes_index_3dim,y=ability))+
-  geom_point()+
-  geom_smooth(method="lm")+
-  theme_blank()
-
-responses %>% 
-  filter(entity=="senior civil servants") %>% 
-  ggplot(aes(x=populist_attitudes_index_3dim,y=assertiveness))+
-  geom_point()+
-  geom_smooth(method="lm")+
-  theme_blank()
-```
-
-```{r}
-tmod1 <- lm(morality~populist_attitudes_index_3dim,family="binomial",data=responses %>% filter(entity=="senior civil servants") %>% labelled::remove_labels())
-tmod2 <- tmod1 %>% update(.~.+
-                            female +
-                age_group+
-                income+
-                education+
-                right_left_ideology+
-                external_efficecy+
-                subjective_social_economic_status)
-
-tmod3 <- tmod1 %>% update(ability~.)
-tmod4 <- tmod2 %>% update(ability~.)
-
-tmod5 <- tmod1 %>% update(assertiveness~.)
-tmod6 <- tmod2 %>% update(assertiveness~.)
-
-
-sjPlot::tab_model(tmod1,tmod2,
-                  tmod3,tmod4,
-                  tmod5,tmod6,
-                  collapse.ci = T)
-```
-
-```{r}
-responses %>% 
-  filter(entity=="senior civil servants",morality==1) %>% 
-  ggplot(aes(x=populist_attitudes_index_3dim,y=response_direction))+
-  geom_point()+
-  geom_smooth(method="lm")+
-  theme_blank()+
-  labs(title="Senior civil servants - Morality")
-
-responses %>% 
-  filter(entity=="senior civil servants",ability==1) %>% 
-  ggplot(aes(x=populist_attitudes_index_3dim,y=response_direction))+
-  geom_point()+
-  geom_smooth(method="lm")+
-  theme_blank()+
-  labs(title="Senior civil servants - Ability")
-
-
-responses %>% 
-  filter(entity=="senior civil servants",assertiveness==1) %>% 
-  ggplot(aes(x=populist_attitudes_index_3dim,y=response_direction))+
-  geom_point()+
-  geom_smooth(method="lm")+
-  theme_blank()+
-  labs(title="Senior civil servants - Assertiveness")
-
-```
-
-```{r}
-tmod1 <- lm(response_direction~populist_attitudes_index_3dim,data=responses %>% filter(entity=="senior civil servants",ability==1) %>% labelled::remove_labels())
-tmod2 <- tmod1 %>% update(.~.+
-                            female +
-                age_group+
-                income+
-                education+
-                right_left_ideology+
-                external_efficecy+
-                subjective_social_economic_status)
-
-sjPlot::tab_model(tmod1,tmod2,
-                  show.est = F,
-                  show.std = T,
-                  collapse.ci = T)
-```
-
-```{r}
-tmod1 <- lm(response_direction~populist_attitudes_index_3dim,data=responses %>% filter(entity=="senior civil servants",assertiveness==1) %>% labelled::remove_labels())
-tmod2 <- tmod1 %>% update(.~.+
-                            female +
-                age_group+
-                income+
-                education+
-                right_left_ideology+
-                external_efficecy+
-                subjective_social_economic_status)
-
-sjPlot::tab_model(tmod1,tmod2,
-                  show.est = F,
-                  show.std = T,
-                  collapse.ci = T)
-```
 
 # Responses
 
@@ -1871,15 +1876,15 @@ responses %>%
 ```
 
 ```{r}
-responses %>%
-  filter(ability==1)%>%   
-  group_by(`manual translation`) %>% 
+responses_pilot2 %>%
+  filter(morality==1) %>%   
+  group_by(response) %>% 
   summarise(n=n(),
-            direction = mean(response_direction,na.rm=T) %>% round(1)) %>% 
-  filter(n>4) %>% 
+            direction = mean(response_direction,na.rm=T) %>% round(1),
+            populist_attitudes_index_3dim = mean(populist_attitudes_index_3dim,na.rm=T) %>% round(2)) %>% 
+  #filter(n>4) %>% 
   arrange(n %>% desc()) %>% 
   gt::gt()
-
 
 ```
 
@@ -2141,3 +2146,793 @@ ggsave(p2,filename = "plots/Anti coalition_responses.png",width=20,height=12,uni
 ```{r}
 pilot2 %>% count(civil_servant_label)
 ```
+
+
+
+# Stereotype scales
+
+
+
+q55_1_caring          – אכפתיים מאוד — לא אכפתיים בכלל
+q55_2_cold_warm       – חמים מאוד ביחסם לאנשים — קרים מאוד ביחסם לאנשים
+q55_3_empathetic      – אמפתיים מאוד — לא אמפתיים בכלל
+q55_4_affectionate    – לבביים מאוד — לא לבביים
+q55_5_friendly        – ידידותיים מאוד — לא ידידותיים בכלל
+q55_6_just            – מאוד מוסריים — לא מוסריים כלל
+q55_7_fair            – הוגנים מאוד — לא הוגנים כלל
+q55_8_considerate     – מאוד מתחשבים — בכלל לא מתחשבים
+q55_9_trustworthy     – אמינים מאוד — כלל לא אמינים
+q55_10_reliable       – אחראים מאוד — חסרי אחריות
+q55_11_self_confident – בעלי ביטחון עצמי גבוה מאוד — חסרי ביטחון עצמי
+q55_12_under_pressure – מתמודדים היטב עם מצבי לחץ — קורסים תחת לחץ
+q55_13_give_up        – לא מוותרים בקלות — מוותרים בקלות
+q55_14_leadership     – בעלי כושר מנהיגות — חסרי כושר מנהיגות
+q55_15_superiority    – חשים עליונות ביחס לאחרים — חשים נחותים ביחס לאחרים
+q55_16_efficient      – מאוד יעילים — אינם יעילים
+q55_17_capable        – בעלי מסוגלות גבוהה — חסרי מסוגלות
+q55_18_competent      – מיומנים מאוד — חסרי מיומנות
+q55_19_intelligent    – מאוד אינטליגנטים — לא אינטליגנטים בכלל
+q55_20_clever         – מאוד פיקחים — לא פיקחים
+
+
+
+
+```{r}
+# summary statistics for items q55...
+
+pilot2 %>% remove_labels() %>%
+  dplyr::select(starts_with("q55"),civil_servant_label) %>%
+  gtsummary::tbl_summary(
+    statistic = list(all_continuous() ~ "{mean} ({sd})"),
+    digits = all_continuous() ~ 2,
+    by = civil_servant_label
+  )
+```
+
+```{r}
+
+# Convert to long format
+survey_long <- pilot2 |> 
+  select(starts_with("q55_"),civil_servant_label) |>
+  pivot_longer(
+    cols = starts_with("q55_"),
+    names_to = "item",
+    values_to = "response"
+  )
+
+
+# Bar plot (showing percentage distribution)
+ggplot(survey_long, aes(x = response, fill = response)) +
+  geom_bar(color = "white") +
+  facet_wrap(~ item, ncol = 4) +
+  scale_y_continuous() +
+  scale_fill_brewer(palette = "Blues") +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Distribution of Stereotype Items",
+    x = "Response",
+    y = "Frequency"
+  ) +
+  theme(
+    legend.position = "none",
+    strip.text = element_text(face = "bold", size = 9)
+  )
+
+```
+
+```{r}
+# Prepare data in long format
+survey_long <- pilot2 |> drop_na(civil_servant_label) |>
+  select(civil_servant_label, starts_with("q55_")) |>
+  pivot_longer(
+    cols = starts_with("q55_"),
+    names_to = "item",
+    values_to = "response"
+  )
+
+# Ensure response is numeric
+survey_long <- survey_long |>
+  mutate(response = as.numeric(response))
+
+# Violin plot
+ggplot(survey_long, aes(x = civil_servant_label, y = response, fill = civil_servant_label)) +
+  geom_violin(trim = FALSE, alpha = 0.7) +
+  geom_boxplot(width = 0.15, color = "black", fill = "white", outlier.shape = NA) +
+  facet_wrap(~ item, ncol = 4, scales = "free_y") +
+  scale_fill_brewer(palette = "Set2", name = "Civil Servant Group") +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Distribution of Stereotype Items Across Civil Servant Groups",
+    x = "Civil Servant Label",
+    y = "Response"
+  ) +
+  theme(
+    legend.position = "none",
+    strip.text = element_text(face = "bold", size = 9),
+    axis.text.x = element_text(angle = 30, hjust = 1)
+  )
+
+```
+
+```{r}
+pilot2 %>% remove_labels() %>%
+  dplyr::select(starts_with("q55")) %>%
+  sjmisc::descr(out = "viewer")
+```
+
+
+```{r}
+pilot2 %>% remove_labels() %>%
+  dplyr::select(starts_with("q55")) %>%
+  sjPlot::tab_corr(triangle = "lower", show.p = F)
+```
+
+
+Sociability
+
+**q55_1_caring          – אכפתיים מאוד — לא אכפתיים בכלל**
+q55_2_cold_warm       – חמים מאוד ביחסם לאנשים — קרים מאוד ביחסם לאנשים
+q55_3_empathetic      – אמפתיים מאוד — לא אמפתיים בכלל
+q55_4_affectionate    – לבביים מאוד — לא לבביים
+**q55_5_friendly        – ידידותיים מאוד — לא ידידותיים בכלל**
+
+```{r}
+
+# Convert to long format
+survey_long <- pilot2 |> 
+    dplyr::select(q55_1_caring:q55_5_friendly,civil_servant_label) %>% 
+  pivot_longer(
+    cols = starts_with("q55_"),
+    names_to = "item",
+    values_to = "response"
+  )
+
+
+# Bar plot (showing percentage distribution)
+ggplot(survey_long, aes(x = response, fill = response)) +
+  geom_bar(color = "white") +
+  facet_wrap(~ item, ncol = 4) +
+  scale_y_continuous() +
+  scale_fill_brewer(palette = "Blues") +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Distribution of Stereotype Items",
+    x = "Response",
+    y = "Frequency"
+  ) +
+  theme(
+    legend.position = "none",
+    strip.text = element_text(face = "bold", size = 9)
+  )
+
+```
+
+```{r}
+pilot2 %>% remove_labels() %>%
+  dplyr::select(q55_1_caring:q55_5_friendly) %>% 
+  sjPlot::tab_itemscale()
+```
+
+```{r}
+pilot2 %>% remove_labels() %>%
+  dplyr::select(q55_1_caring:q55_5_friendly) %>% 
+  sjPlot::tab_corr(triangle = "lower", show.p = F)
+```
+
+```{r}
+pilot2 %>%
+  mutate(
+    sociability = (q55_1_caring+q55_5_friendly-2)/8)  |> 
+      ggplot(aes(x=sociability))+
+  geom_bar()+
+  #facet_wrap(vars(civil_servant_label))+
+  theme_blank()
+
+
+pilot2 %>%
+  mutate(
+    sociability = (q55_1_caring+q55_5_friendly-2)/8)  |> 
+ggplot(aes(x=sociability))+
+  geom_bar()+
+  facet_wrap(vars(civil_servant_label))+
+  theme_blank()
+
+
+```
+
+
+Morality
+
+**q55_6_just            – מאוד מוסריים — לא מוסריים כלל**
+**q55_7_fair            – הוגנים מאוד — לא הוגנים כלל**
+q55_8_considerate     – מאוד מתחשבים — בכלל לא מתחשבים
+**q55_9_trustworthy     – אמינים מאוד — כלל לא אמינים**
+q55_10_reliable       – אחראים מאוד — חסרי אחריות
+
+
+```{r}
+
+# Convert to long format
+survey_long <- pilot2 |> 
+    dplyr::select(q55_6_just:q55_10_reliable,civil_servant_label) %>% 
+  pivot_longer(
+    cols = starts_with("q55_"),
+    names_to = "item",
+    values_to = "response"
+  )
+
+
+# Bar plot (showing percentage distribution)
+ggplot(survey_long, aes(x = response, fill = response)) +
+  geom_bar(color = "white") +
+  facet_wrap(~ item, ncol = 4) +
+  scale_y_continuous() +
+  scale_fill_brewer(palette = "Blues") +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Distribution of Stereotype Items",
+    x = "Response",
+    y = "Frequency"
+  ) +
+  theme(
+    legend.position = "none",
+    strip.text = element_text(face = "bold", size = 9)
+  )
+
+```
+
+```{r}
+pilot2 %>% remove_labels() %>%
+    dplyr::select(q55_6_just:q55_10_reliable) %>% 
+  sjPlot::tab_itemscale()
+```
+
+```{r}
+pilot2 %>% remove_labels() %>%
+    dplyr::select(q55_6_just:q55_10_reliable) %>% 
+  sjPlot::tab_corr(triangle = "lower", show.p = F)
+```
+
+```{r}
+pilot2 %>% remove_labels() %>%
+    dplyr::select(q55_6_just,q55_7_fair,q55_9_trustworthy) %>% 
+  sjPlot::tab_itemscale()
+```
+
+```{r}
+pilot2 %>%
+  mutate(
+    morality = (q55_6_just+q55_7_fair+q55_9_trustworthy-3)/12)  |> 
+      ggplot(aes(x=morality))+
+  geom_bar()+
+  #facet_wrap(vars(civil_servant_label))+
+  theme_blank()
+
+
+pilot2 %>%
+  mutate(
+    morality = (q55_1_caring+q55_5_friendly-2)/8)  |> 
+ggplot(aes(x=morality))+
+  geom_bar()+
+  facet_wrap(vars(civil_servant_label))+
+  theme_blank()
+
+```
+
+
+```{r}
+#correlation bewteen sociability and morality scales
+
+pilot2 %>%
+  mutate(
+    sociability = (q55_1_caring+q55_5_friendly-2)/8,
+    morality = (q55_6_just+q55_7_fair+q55_9_trustworthy-3)/12
+  )  |> 
+  ggplot(aes(x=sociability,y=morality))+
+  geom_jitter(alpha=0.5)+
+  geom_smooth(method="lm")+ # add r-squared 
+  theme_blank() +
+  ggpubr::stat_cor(method = "pearson")
+
+
+pilot2 %>%
+  mutate(
+    sociability = (q55_1_caring+q55_5_friendly-2)/8,
+    morality = (q55_6_just+q55_7_fair+q55_9_trustworthy-3)/12
+  )  |> 
+  ggplot(aes(x=sociability,y=morality))+
+  geom_jitter(alpha=0.5)+
+  geom_smooth(method="lm")+ # add r-squared 
+  theme_blank() +
+  facet_wrap(vars(civil_servant_label))+
+  ggpubr::stat_cor(method = "pearson")
+
+```
+
+Ability
+**q55_16_efficient      – מאוד יעילים — אינם יעילים**
+q55_17_capable        – בעלי מסוגלות גבוהה — חסרי מסוגלות
+**q55_18_competent      – מיומנים מאוד — חסרי מיומנות**
+**q55_19_intelligent    – מאוד אינטליגנטים — לא אינטליגנטים בכלל**
+q55_20_clever         – מאוד פיקחים — לא פיקחים
+
+
+```{r}
+
+# Convert to long format
+survey_long <- pilot2 |> 
+    dplyr::select(q55_16_efficient:q55_20_clever,civil_servant_label) %>% 
+  pivot_longer(
+    cols = starts_with("q55_"),
+    names_to = "item",
+    values_to = "response"
+  )
+
+
+# Bar plot (showing percentage distribution)
+ggplot(survey_long, aes(x = response, fill = response)) +
+  geom_bar(color = "white") +
+  facet_wrap(~ item, ncol = 4) +
+  scale_y_continuous() +
+  scale_fill_brewer(palette = "Blues") +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Distribution of Stereotype Items",
+    x = "Response",
+    y = "Frequency"
+  ) +
+  theme(
+    legend.position = "none",
+    strip.text = element_text(face = "bold", size = 9)
+  )
+
+```
+
+```{r}
+pilot2 %>% remove_labels() %>%
+    dplyr::select(q55_16_efficient:q55_20_clever) %>% 
+  sjPlot::tab_itemscale()
+```
+
+```{r}
+pilot2 %>% remove_labels() %>%
+    dplyr::select(q55_16_efficient:q55_20_clever) %>% 
+  sjPlot::tab_corr(triangle = "lower", show.p = F)
+```
+
+```{r}
+pilot2 %>% remove_labels() %>%
+    dplyr::select(q55_16_efficient,q55_18_competent,q55_19_intelligent) %>% 
+  sjPlot::tab_itemscale()
+```
+
+```{r}
+pilot2 %>%
+  mutate(
+    ability = (q55_16_efficient+q55_18_competent+q55_19_intelligent-3)/12)  |> 
+      ggplot(aes(x=ability))+
+  geom_bar()+
+  #facet_wrap(vars(civil_servant_label))+
+  theme_blank()
+
+
+pilot2 %>%
+  mutate(
+    ability = (q55_16_efficient+q55_18_competent+q55_19_intelligent-3)/12)  |> 
+      ggplot(aes(x=ability))+
+  geom_bar()+
+  facet_wrap(vars(civil_servant_label))+
+  theme_blank()
+
+```
+
+
+```{r}
+#correlation bewteen sociability and morality scales
+
+pilot2 %>%
+  mutate(
+    sociability = (q55_1_caring+q55_5_friendly-2)/8,
+    morality = (q55_6_just+q55_7_fair+q55_9_trustworthy-3)/12,
+    ability = (q55_16_efficient+q55_18_competent+q55_19_intelligent-3)/12 
+  )  |> 
+  ggplot(aes(x=ability,y=morality))+
+  geom_jitter(alpha=0.5)+
+  geom_smooth(method="lm")+ # add r-squared 
+  theme_blank() +
+  ggpubr::stat_cor(method = "pearson")
+
+
+
+pilot2 %>%
+  mutate(
+    sociability = (q55_1_caring+q55_5_friendly-2)/8,
+    morality = (q55_6_just+q55_7_fair+q55_9_trustworthy-3)/12,
+    ability = (q55_16_efficient+q55_18_competent+q55_19_intelligent-3)/12 
+  )  |> 
+  ggplot(aes(x=ability,y=morality))+
+  geom_jitter(alpha=0.5)+
+  geom_smooth(method="lm")+ # add r-squared 
+  theme_blank() +
+  facet_wrap(vars(civil_servant_label))+
+  ggpubr::stat_cor(method = "pearson")
+
+```
+
+
+Assertiveness
+**q55_11_self_confident – בעלי ביטחון עצמי גבוה מאוד — חסרי ביטחון עצמי**
+**q55_12_under_pressure – מתמודדים היטב עם מצבי לחץ — קורסים תחת לחץ**
+**q55_13_give_up        – לא מוותרים בקלות — מוותרים בקלות**
+q55_14_leadership     – בעלי כושר מנהיגות — חסרי כושר מנהיגות
+q55_15_superiority    – חשים עליונות ביחס לאחרים — חשים נחותים ביחס לאחרים
+
+
+```{r}
+
+# Convert to long format
+survey_long <- pilot2 |> 
+    dplyr::select(q55_11_self_confident:q55_15_superiority,civil_servant_label) %>% 
+  pivot_longer(
+    cols = starts_with("q55_"),
+    names_to = "item",
+    values_to = "response"
+  )
+
+
+# Bar plot (showing percentage distribution)
+ggplot(survey_long, aes(x = response, fill = response)) +
+  geom_bar(color = "white") +
+  facet_wrap(~ item, ncol = 4) +
+  scale_y_continuous() +
+  scale_fill_brewer(palette = "Blues") +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Distribution of Stereotype Items",
+    x = "Response",
+    y = "Frequency"
+  ) +
+  theme(
+    legend.position = "none",
+    strip.text = element_text(face = "bold", size = 9)
+  )
+
+```
+
+```{r}
+pilot2 %>% remove_labels() %>%
+    dplyr::select(q55_11_self_confident:q55_15_superiority) %>% 
+  sjPlot::tab_itemscale()
+```
+
+```{r}
+pilot2 %>% remove_labels() %>%
+    dplyr::select(q55_11_self_confident:q55_15_superiority) %>% 
+  sjPlot::tab_corr(triangle = "lower", show.p = F)
+```
+
+```{r}
+
+pilot2 %>% remove_labels() %>%
+  filter(civil_servant_label=="public service employee") %>%
+    dplyr::select(q55_11_self_confident:q55_13_give_up) %>% 
+  sjPlot::tab_itemscale()
+```
+
+```{r}
+pilot2 %>%
+  mutate(
+    assertiveness = (q55_11_self_confident+q55_12_pressure_coping+q55_13_give_up-3)/12)  |> 
+      ggplot(aes(x=assertiveness))+
+  geom_bar()+
+  #facet_wrap(vars(civil_servant_label))+
+  theme_blank()
+
+
+pilot2 %>%
+  mutate(
+    assertiveness = (q55_11_self_confident+q55_12_pressure_coping+q55_13_give_up-3)/12)  |> 
+      ggplot(aes(x=assertiveness))+
+  geom_bar()+
+  facet_wrap(vars(civil_servant_label))+
+  theme_blank()
+
+```
+
+
+```{r}
+#correlation bewteen sociability and morality scales
+
+pilot2 %>%
+  mutate(
+    sociability = (q55_1_caring+q55_5_friendly-2)/8,
+    morality = (q55_6_just+q55_7_fair+q55_9_trustworthy-3)/12,
+    ability = (q55_16_efficient+q55_18_competent+q55_19_intelligent-3)/12 ,
+    assertiveness = (q55_11_self_confident+q55_12_pressure_coping+q55_13_give_up-3)/12
+  )  |> 
+  ggplot(aes(x=ability,y=assertiveness))+
+  geom_jitter(alpha=0.5)+
+  geom_smooth(method="lm")+ # add r-squared 
+  theme_blank() +
+  ggpubr::stat_cor(method = "pearson")
+
+
+
+pilot2 %>%
+  mutate(
+    sociability = (q55_1_caring+q55_5_friendly-2)/8,
+    morality = (q55_6_just+q55_7_fair+q55_9_trustworthy-3)/12,
+    ability = (q55_16_efficient+q55_18_competent+q55_19_intelligent-3)/12 ,
+    assertiveness = (q55_11_self_confident+q55_12_pressure_coping+q55_13_give_up-3)/12
+  )  |> 
+  ggplot(aes(x=ability,y=assertiveness))+
+  geom_jitter(alpha=0.5)+
+  geom_smooth(method="lm")+ # add r-squared 
+  theme_blank() +
+  ggpubr::stat_cor(method = "pearson")+
+  facet_wrap(vars(civil_servant_label))
+
+```
+
+
+
+### 1 factor (aftrer reducing items)
+
+```{r}
+cfa.model.1factor_ster <- '
+  one_factor =~ q55_1_caring+q55_5_friendly+q55_6_just+q55_7_fair+q55_9_trustworthy+q55_16_efficient+q55_18_competent+q55_19_intelligent+q55_11_self_confident+q55_12_pressure_coping+q55_13_give_up'
+
+fit.cfa.model.1factor_ster <- cfa(
+  cfa.model.1factor_ster, # model formula,
+  data = pilot2,
+  se = "robust",
+  std.lv = T
+)
+
+summary(fit.cfa.model.1factor_ster, fit.measures = TRUE, standardize = TRUE)
+```
+
+
+
+### 4 factor (all items)
+
+```{r}
+  
+
+cfa.model.4factor_ster <- '
+  sociability =~ q55_1_caring + q55_2_cold_warm + q55_3_empathetic + q55_4_affectionate + q55_5_friendly
+  morality =~  q55_6_just + q55_7_fair + q55_8_considerate + q55_9_trustworthy + q55_10_reliable           
+  assertiveness =~   q55_11_self_confident + q55_12_under_pressure + q55_13_give_up + q55_14_leadership + q55_15_superiority
+  ability =~ q55_16_efficient  + q55_17_capable + q55_18_competent + q55_19_intelligent + q55_20_clever'
+
+
+
+fit.cfa.model.4factor_ster <- cfa(
+  cfa.model.4factor_ster, # model formula,
+  data = pilot2,
+  se = "robust",
+  std.lv = T
+)
+
+summary(fit.cfa.model.4factor_ster, fit.measures = TRUE, standardize = TRUE)
+```
+
+
+### 4 factor 
+
+```{r}
+
+cfa.model.4factor_ster <- '
+  sociability =~ q55_1_caring+q55_5_friendly
+  morality =~  q55_6_just+q55_7_fair+q55_9_trustworthy     
+  assertiveness =~   q55_11_self_confident+q55_12_pressure_coping+q55_13_give_up
+  ability =~ q55_16_efficient+q55_18_competent+q55_19_intelligent'
+
+
+
+fit.cfa.model.4factor_ster <- cfa(
+  cfa.model.4factor_ster, # model formula,
+  data = pilot2,
+  se = "robust",
+  std.lv = T
+)
+
+summary(fit.cfa.model.4factor_ster, fit.measures = TRUE, standardize = TRUE)
+```
+
+
+```{r}
+parameterEstimates(fit.cfa.model.4factor_ster, standardized=TRUE) %>% 
+  filter(op == "=~") %>% 
+  mutate(Beta = str_c(std.all %>% round(3)," (",pvalue %>% round(3),")")) %>% 
+    dplyr::select('Latent Factor'=lhs,  
+           'Indicator' = rhs,
+           'Estimate std.' = Beta) %>% 
+gt()
+
+```
+
+```{r}
+fitmeasures(fit.cfa.model.4factor_ster, c('chisq','df','pvalue','cfi','tli', 'rmsea', 'rmsea.ci.upper','rmsea.ci.lower', 'srmr')) %>% 
+  broom::tidy() %>% 
+  pivot_wider(names_from = names,values_from = x) %>% 
+  mutate(chisq_01 = str_c(chisq %>% round(3)," [","df=",df,", p=",pvalue %>% round(3),"]"),
+         rmsea_01 = str_c(rmsea %>% round(3)," CI[", rmsea.ci.lower %>% round(3),",",rmsea.ci.upper %>% round(3),"]"),
+         cfi = cfi %>% round(3),
+         tli = tli %>% round(3),
+         srmr = srmr %>% round(3),
+         n = fit.cfa.model.4factor_ster@SampleStats@nobs) %>%
+  dplyr::select('N' = n,
+          'Chi-sq' = chisq_01,
+         'CFI' = cfi,
+         'TLI' = tli,
+         'RMSEA' = rmsea_01,
+         'SRMR' = srmr) %>% 
+  t() 
+```
+
+
+### 2 factor
+
+```{r}
+
+cfa.model.2factor_ster <- '
+  communion =~ q55_1_caring+q55_5_friendly + q55_6_just+q55_7_fair+q55_9_trustworthy     
+  agency =~   q55_11_self_confident+q55_12_pressure_coping+q55_13_give_up + q55_16_efficient+q55_18_competent+q55_19_intelligent'
+
+
+
+fit.cfa.model.2factor_ster <- cfa(
+  cfa.model.2factor_ster, # model formula,
+  data = pilot2,
+  se = "robust",
+  std.lv = T
+)
+
+summary(fit.cfa.model.2factor_ster, fit.measures = TRUE, standardize = TRUE)
+```
+
+
+```{r}
+pilot2 <- pilot2 %>%
+  mutate(
+    sociability_scale = (q55_1_caring+q55_5_friendly-2)/8,
+    morality_scale = (q55_6_just+q55_7_fair+q55_9_trustworthy-3)/12,
+    ability_scale = (q55_16_efficient+q55_18_competent+q55_19_intelligent-3)/12 ,
+    assertiveness_scale = (q55_11_self_confident+q55_12_pressure_coping+q55_13_give_up-3)/12
+  )
+
+
+
+  responses_pilot2 <- responses_pilot2 %>%
+  mutate(
+    sociability_scale = (q55_1_caring+q55_5_friendly-2)/8,
+    morality_scale = (q55_6_just+q55_7_fair+q55_9_trustworthy-3)/12,
+    ability_scale = (q55_16_efficient+q55_18_competent+q55_19_intelligent-3)/12 ,
+    assertiveness_scale = (q55_11_self_confident+q55_12_pressure_coping+q55_13_give_up-3)/12
+  )
+
+```
+
+## Correlations with trust and conspiracy
+
+```{r}
+pilot2 %>% remove_labels() %>%
+  dplyr::select(sociability_scale,
+                morality_scale,
+                ability_scale,
+                assertiveness_scale,
+                conspiracy_deep_state_n,
+    conspiracy_vaccine_n,
+    trust_knesset:trust_media) %>%
+  sjPlot::tab_corr(triangle = "lower", show.p = F)
+```
+
+
+```{r}
+pilot2 %>% remove_labels() %>%
+  filter(coalition_party_vote_intention=="Netanyahu coalition") %>%
+  dplyr::select(sociability_scale,
+                morality_scale,
+                ability_scale,
+                assertiveness_scale,
+                conspiracy_deep_state_n,
+    conspiracy_vaccine_n,
+    trust_knesset:trust_media) %>%
+  sjPlot::tab_corr(triangle = "lower", show.p = F)
+```
+
+```{r}
+pilot2 %>% remove_labels() %>%
+  filter(coalition_party_vote_intention=="Anti Netanyahu coalition") %>%
+  dplyr::select(sociability_scale,
+                morality_scale,
+                ability_scale,
+                assertiveness_scale,
+                conspiracy_deep_state_n,
+    conspiracy_vaccine_n,
+    trust_knesset:trust_media) %>%
+  sjPlot::tab_corr(triangle = "lower", show.p = F)
+```
+
+
+## Correlations with responses
+
+
+```{r}
+responses_pilot2 %>% remove_labels() %>%
+  dplyr::select(sociability_scale,
+                morality_scale,
+                ability_scale,
+                assertiveness_scale,
+                response_direction) %>%
+  sjPlot::tab_corr(triangle = "lower", show.p = F)
+```
+
+
+```{r}
+responses_pilot2 %>% remove_labels() %>%
+  filter(sociability==1) |> 
+  dplyr::select(sociability_scale,
+                morality_scale,
+                ability_scale,
+                assertiveness_scale,
+                response_direction) %>%
+  sjPlot::tab_corr(triangle = "lower", show.p = F,title="sociability = 1")
+
+```
+
+```{r}
+responses_pilot2 %>% remove_labels() %>%
+  filter(morality==1) |> 
+  dplyr::select(sociability_scale,
+                morality_scale,
+                ability_scale,
+                assertiveness_scale,
+                response_direction) %>%
+  sjPlot::tab_corr(triangle = "lower", show.p = F,title="Morality = 1")
+
+```
+
+
+```{r}
+responses_pilot2 %>% remove_labels() %>%
+  filter(ability==1) |> 
+  dplyr::select(sociability_scale,
+                morality_scale,
+                ability_scale,
+                assertiveness_scale,
+                response_direction) %>%
+  sjPlot::tab_corr(triangle = "lower", show.p = F,title="Ability = 1")
+
+```
+
+```{r}
+responses_pilot2 %>% remove_labels() %>%
+  filter(assertiveness==1) |> 
+  dplyr::select(sociability_scale,
+                morality_scale,
+                ability_scale,
+                assertiveness_scale,
+                response_direction) %>%
+  sjPlot::tab_corr(triangle = "lower", show.p = F,title="assertiveness = 1")
+
+```
+
+### correlation with populist attitudes index
+
+```{r}
+
+```
+```{r}
+pilot2 %>% 
+  drop_na(civil_servant_label) %>%
+#filter(civil_servant_label!="public service bureaucrat") %>% 
+  ggplot(aes(x=populist_attitudes_index_4dim,y=morality_scale,color=coalition_party_vote_intention))+
+  geom_jitter(alpha=0.6)+
+  facet_wrap(vars(civil_servant_label))+
+  geom_smooth(method="lm")+
+  theme_blank()
+  
+```
+

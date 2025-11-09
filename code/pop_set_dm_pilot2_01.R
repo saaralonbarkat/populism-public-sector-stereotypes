@@ -119,22 +119,21 @@ mutate(external_efficecy = dplyr::coalesce(q194,q195) %>% na_if(5) %>%
     a1_q119_1==1 ~ "public service employee",
     a2_q119_1==1 ~ "public service clerk",
     a3_q119_1==1 ~ "bureaucrat",
+    nchar(a3_qid31)>0 ~ "bureaucrat",
     a4_q119_1==1 ~ "public service bureaucrat",
     
-  ))
+  )) 
 
-pilot2 %>% labelled::remove_labels() %>%  ggplot(aes(x=populist_attitudes_index_3dim))+
-  geom_histogram(bins=10)+
-  facet_wrap(vars(trust_civil_service))
 
-pilot2 %>% labelled::remove_labels() %>%  ggplot(aes(x=trust_civil_service,y=populist_attitudes_index_3dim))+
-  geom_jitter()+
-  geom_smooth()
-
-pilot2 %>% 
-  group_by(trust_civil_service) %>% 
-  summarise(n=n(),mean(populist_attitudes_index_3dim))
-
+t1 <- pilot2 |> 
+  mutate(civil_servant_label = case_when(
+    a1_q119_1==1 ~ "public service employee",
+    a2_q119_1==1 ~ "public service clerk",
+    a3_q119_1==1 ~ "bureaucrat",
+    nchar(a3_qid31)>0 ~ "bureaucrat",
+    a4_q119_1==1 ~ "public service bureaucrat",
+    
+  )) 
 # responses dataset
 
 ## responses dataset public service employees (1) # עובדים בשירות הציבורי
