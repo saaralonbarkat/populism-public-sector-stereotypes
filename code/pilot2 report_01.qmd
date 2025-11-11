@@ -89,6 +89,25 @@ pilot2_labs <- pilot2 %>% remove_labels() %>%
       religiosity == 6 ~ "1.Secular",
       TRUE ~ NA_character_
     )
+  ) |> mutate(
+    party_vote_intention_en = case_when(
+      party_vote_intention == 1 ~ "Likud",
+      party_vote_intention == 2 ~ "Yesh Atid",
+      party_vote_intention == 3 ~ "Religious Zionism",
+      party_vote_intention == 4 ~ "The State Camp",
+      party_vote_intention == 5 ~ "Shas",
+      party_vote_intention == 6 ~ "United Torah Judaism",
+      party_vote_intention == 7 ~ "Israel Beiteinu",
+      party_vote_intention == 8 ~ "United Arab List (Ra'am)",
+      party_vote_intention == 9 ~ "Hadash-Ta'al",
+      party_vote_intention == 10 ~ "The Democrats (Labor-Meretz)",
+      party_vote_intention == 11 ~ "Bennet Party",
+      party_vote_intention == 12 ~ "Balad",
+      party_vote_intention == 13 ~ "Jewish Power (Otzma Yehudit)",
+      party_vote_intention == 14 ~ "Other party (specify)",
+      party_vote_intention == 15 ~ "Don't know",
+      TRUE ~ NA_character_
+    )
   )
 
 ```
@@ -400,6 +419,12 @@ pilot2 |>
   theme_minimal()
 ```
 
+```{r}
+pilot2 %>% 
+  dplyr::select(populist_attitudes_index_4dim,populist_attitudes_index_4dim_minimum) %>% 
+  sjPlot::tab_corr()
+```
+
 ## Populist attitudes and partisanship
 
 ```{r}
@@ -426,17 +451,17 @@ coord_flip() +
 ```
 
 ```{r}
-pilot2 %>%
+pilot2_labs %>%
     filter(party_vote_intention!=9) %>% 
   drop_na(party_vote_intention) %>% 
   mutate(
     party_vote_intention = labelled::to_factor(party_vote_intention)
   ) %>%
-  group_by(party_vote_intention) %>%
+  group_by(party_vote_intention_en) %>%
   mutate(mean_pop = mean(populist_attitudes_index_4dim, na.rm = TRUE)) %>%
   ungroup() %>%
-  mutate(party_vote_intention = fct_reorder(party_vote_intention, mean_pop)) %>%
-  ggplot(aes(x = party_vote_intention, y = populist_attitudes_index_4dim)) +
+  mutate(party_vote_intention_en = fct_reorder(party_vote_intention_en, mean_pop)) %>%
+  ggplot(aes(x = party_vote_intention_en, y = populist_attitudes_index_4dim)) +
   geom_point(alpha=0.2) +
   stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
       stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
@@ -496,6 +521,14 @@ coord_flip() +
 ```
 
 ```{r}
+pilot2 |> 
+  group_by(party_vote_intention) |>
+  summarise(mean_populist_attitudes_index_4dim = mean(populist_attitudes_index_4dim, na.rm = TRUE),
+            n = n())
+            
+```
+
+```{r}
 pilot2 %>%
   drop_na(right_left_ideology) %>% 
   ggplot(aes(x = right_left_ideology %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
@@ -537,7 +570,7 @@ pilot2 %>%
 coord_flip() +
   labs(
     x = NULL,
-    y = "Populist Attitudes index",
+    y = "Populist Attitudes index (4 dimensions)",
     title = "coalition_party_vote_intention"
   ) +
   theme_minimal()
@@ -987,9 +1020,9 @@ pilot2 %>% labelled::remove_labels() %>%
 
 ```{r}
 pilot2 %>% labelled::remove_labels() %>% 
-  dplyr::select(populist_attitudes_index_3dim,                popular_sovereignty:manichean,
+  dplyr::select(populist_attitudes_index_4dim,        
 trust_knesset:trust_media) %>% 
-  sjPlot::tab_corr(triangle = "lower")
+  sjPlot::tab_corr(triangle = "lower", title = "Correlation Table: Stereotype Items")
 ```
 
 ```{r}
@@ -1011,14 +1044,15 @@ t1 %>%
 
 ```{r}
 pilot2 %>% labelled::remove_labels() |> 
-  dplyr::select(populist_attitudes_index_3dim,trust_knesset,
+  dplyr::select(populist_attitudes_index_4dim,trust_knesset,
            trust_government,
            trust_judiciary,
            trust_health,
            trust_police,
            trust_municipality,
            trust_civil_service,
-           trust_media) |> 
+           trust_media,
+           external_efficecy) |> 
   sjPlot::tab_corr()
 ```
 
@@ -1172,7 +1206,7 @@ pilot2 |>
 ```{r}
 model_1 <- lm(trust_civil_service ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels()|> filter(coalition_party_vote_intention!="Other"),na.rm=T)
 
-model_2 <- model_1 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+model_2 <- model_1 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention))
 
 model_3 <- model_1 %>% update(.~.+ 
   female +
@@ -1182,7 +1216,7 @@ model_3 <- model_1 %>% update(.~.+
                 external_efficecy+
                 subjective_social_economic_status +
                 affective_polarization)
-model_4 <- model_3 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+model_4 <- model_3 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention))
 
 
 
@@ -1219,7 +1253,7 @@ pilot2 |>
 ```{r}
 model_1 <- lm(trust_police ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels(),na.rm=T)
 
-model_2 <- model_1 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+model_2 <- model_1 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention))
 
 model_3 <- model_1 %>% update(.~.+ 
   female +
@@ -1229,7 +1263,7 @@ model_3 <- model_1 %>% update(.~.+
                 external_efficecy+
                 subjective_social_economic_status +
                 affective_polarization)
-model_4 <- model_3 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+model_4 <- model_3 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention))
 model_5 <- lm(trust_police ~ populist_attitudes_index_4dim + right_left_ideology ,pilot2 %>% labelled::remove_labels() |> filter(coalition_party_vote_intention=="Netanyahu coalition"))
 
 
@@ -1272,6 +1306,148 @@ sjPlot::tab_model(model_1,model_2,model_3,model_4,
 sjPlot::plot_model(model_4,type = "pred",terms = c("anti_elitism", "coalition_party_vote_intention"))
 ```
 
+
+
+```{r}
+model_1 <- lm(trust_judiciary ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels()|> filter(coalition_party_vote_intention!="Other"),na.rm=T)
+
+model_2 <- model_1 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention))
+
+model_3 <- model_1 %>% update(.~.+ 
+  female +
+                age_group+
+                income+
+                education+
+                external_efficecy+
+                subjective_social_economic_status +
+                affective_polarization)
+model_4 <- model_3 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention))
+
+
+
+sjPlot::tab_model(model_1,model_2,model_3,model_4,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+```{r}
+sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4dim", "coalition_party_vote_intention"))
+```
+
+
+```{r}
+model_1 <- lm(trust_media ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels()|> filter(coalition_party_vote_intention!="Other"),na.rm=T)
+
+model_2 <- model_1 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention))
+
+model_3 <- model_1 %>% update(.~.+ 
+  female +
+                age_group+
+                income+
+                education+
+                external_efficecy+
+                subjective_social_economic_status +
+                affective_polarization)
+model_4 <- model_3 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention))
+
+
+
+sjPlot::tab_model(model_1,model_2,model_3,model_4,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+```{r}
+sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4dim", "coalition_party_vote_intention"))
+```
+
+
+```{r}
+model_1 <- lm(trust_health ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels()|> filter(coalition_party_vote_intention!="Other"),na.rm=T)
+
+model_2 <- model_1 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+
+model_3 <- model_1 %>% update(.~.+ 
+  female +
+                age_group+
+                income+
+                education+
+                external_efficecy+
+                subjective_social_economic_status +
+                affective_polarization)
+model_4 <- model_3 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+
+
+
+sjPlot::tab_model(model_1,model_2,model_3,model_4,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+```{r}
+sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4dim", "coalition_party_vote_intention"))
+```
+
+
+
+```{r}
+model_1 <- lm(trust_police ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels()|> filter(coalition_party_vote_intention!="Other"),na.rm=T)
+
+model_2 <- model_1 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+
+model_3 <- model_1 %>% update(.~.+ 
+  female +
+                age_group+
+                income+
+                education+
+                external_efficecy+
+                subjective_social_economic_status +
+                affective_polarization)
+model_4 <- model_3 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+
+
+
+sjPlot::tab_model(model_1,model_2,model_3,model_4,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+```{r}
+sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4dim", "coalition_party_vote_intention"))
+```
+
+
+
+```{r}
+model_1 <- lm(trust_knesset ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels()|> filter(coalition_party_vote_intention!="Other"),na.rm=T)
+
+model_2 <- model_1 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+
+model_3 <- model_1 %>% update(.~.+ 
+  female +
+                age_group+
+                income+
+                education+
+                external_efficecy+
+                subjective_social_economic_status +
+                affective_polarization)
+model_4 <- model_3 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+
+
+
+sjPlot::tab_model(model_1,model_2,model_3,model_4,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+```{r}
+sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4dim", "coalition_party_vote_intention"))
+```
 
 # Conspiracy
 
@@ -1323,6 +1499,11 @@ labs(x = NULL,
 ```{r}
 pilot2 %>% labelled::remove_labels() %>% 
   dplyr::select(populist_attitudes_index_4dim,                popular_sovereignty:manichean,
+conspiracy_deep_state_n,conspiracy_vaccine_n) %>% 
+  sjPlot::tab_corr(triangle = "lower")
+
+pilot2 %>% labelled::remove_labels() %>% 
+  dplyr::select(populist_attitudes_index_4dim,    
 conspiracy_deep_state_n,conspiracy_vaccine_n) %>% 
   sjPlot::tab_corr(triangle = "lower")
 
@@ -1386,7 +1567,7 @@ Models for deep state conspiracy belief
 ```{r}
 model_1 <- lm(conspiracy_deep_state_n ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels()|> filter(coalition_party_vote_intention!="Other"),na.rm=T)
 
-model_2 <- model_1 %>% update(conspiracy_deep_state_n~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+model_2 <- model_1 %>% update(conspiracy_deep_state_n~.+populist_attitudes_index_4dim*(coalition_party_vote_intention))
 
 model_3 <- model_1 %>% update(.~.+ 
   female +
@@ -1396,7 +1577,7 @@ model_3 <- model_1 %>% update(.~.+
                 external_efficecy+
                 subjective_social_economic_status +
                 affective_polarization)
-model_4 <- model_3 %>% update(conspiracy_deep_state_n~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+model_4 <- model_3 %>% update(conspiracy_deep_state_n~.+populist_attitudes_index_4dim*(coalition_party_vote_intention))
 
 
 
@@ -1407,16 +1588,16 @@ sjPlot::tab_model(model_1,model_2,model_3,model_4,
 ```
 
 ```{r}
-sjPlot::plot_model(model_2,type = "pred",terms = c("populist_attitudes_index_4dim", "coalition_party_vote_intention"))
+sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4dim", "coalition_party_vote_intention"))
 ```
 
 Models for vaccine conspiracy belief
 
 
 ```{r}
-model_1 <- lm(conspiracy_vaccine_n ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels(),na.rm=T)
+model_1 <- lm(conspiracy_vaccine_n ~ populist_attitudes_index_4dim + coalition_party_vote_intention + right_left_ideology ,pilot2 %>% labelled::remove_labels()|> filter(coalition_party_vote_intention!="Other"),na.rm=T)
 
-model_2 <- model_1 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+model_2 <- model_1 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention))
 
 model_3 <- model_1 %>% update(.~.+ 
   female +
@@ -1426,7 +1607,7 @@ model_3 <- model_1 %>% update(.~.+
                 external_efficecy+
                 subjective_social_economic_status +
                 affective_polarization)
-model_4 <- model_3 %>% update(conspiracy_deep_state_n~.+populist_attitudes_index_4dim*(coalition_party_vote_intention+right_left_ideology))
+model_4 <- model_3 %>% update(.~.+populist_attitudes_index_4dim*(coalition_party_vote_intention))
 
 
 
@@ -1436,7 +1617,7 @@ sjPlot::tab_model(model_1,model_2,model_3,model_4,
                   collapse.ci = T)
 ```
 ```{r}
-sjPlot::plot_model(model_2,type = "pred",terms = c("populist_attitudes_index_4dim", "coalition_party_vote_intention"))
+sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4dim", "coalition_party_vote_intention"))
 ```
 
 
