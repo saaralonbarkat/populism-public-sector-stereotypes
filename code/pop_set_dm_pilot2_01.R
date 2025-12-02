@@ -59,8 +59,13 @@ mutate(external_efficecy = dplyr::coalesce(q194,q195) %>% na_if(5) %>%
     party_vote_intention %in% c(2,4,7,9,10,11) ~ "Anti Netanyahu coalition",
     TRUE ~ "Other"
   )) %>%
-  
-  
+  mutate(pro_netanyahu_coalition = 
+    case_when(coalition_party_vote_intention=="Netanyahu coalition" ~ "Netanyahu coalition",
+              coalition_party_vote_intention=="Other" & coalition_party_vote_past=="Netanyahu coalition" ~ "Netanyahu coalition",
+              coalition_party_vote_intention=="Anti Netanyahu coalition" ~ "Anti-Netanyahu/Other",
+              TRUE ~ "Anti-Netanyahu/Other"
+    )) %>%
+
 # Populist attitudes
   mutate(
     pop1 = dplyr::coalesce(q125_1, q184_1),#popular sovereignty 1
@@ -91,6 +96,8 @@ mutate(external_efficecy = dplyr::coalesce(q194,q195) %>% na_if(5) %>%
          manichean           = (((pop11_n + pop12_n + pop13_n)/3-1)/4)) %>% 
   mutate(populist_attitudes_index_4dim = (popular_sovereignty+anti_elitism+homogeneity+manichean)/4,
          populist_attitudes_index_3dim = (popular_sovereignty+anti_elitism+homogeneity)/3) %>% 
+  
+  mutate(elite_group_text = stringr::str_c(q127, q185)) |> 
   
   
 #Trust
@@ -289,3 +296,10 @@ responses_direction_pilot2 <- bind_rows(responses_public_service_employees,
 
 
 
+coded_responses_pilot2 <- read_csv("data/2nd pilot_manual_coding - translation.csv")
+
+responses_pilot2 <- coded_responses_pilot2 %>% 
+  filter(`erase?`!=1) %>% 
+  left_join(pilot2,by=c("civil_servant_label","response_id")) |> 
+  mutate(positive_direction = ifelse(response_direction>3,1,0),
+         negative_direction = ifelse(response_direction<3,1,0))

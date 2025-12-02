@@ -1,0 +1,2353 @@
+---
+title: "Power simulation"
+author: "Saar Alon-Barkat"
+date: "November 2025"
+format:
+  html:
+    self-contained: true
+    code-fold: true
+    toc: true
+    toc-location: left
+execute:
+  message: false
+  warning: false
+---
+
+```{r}
+set.seed(2025)
+```
+
+```{r}
+library(tidyverse)
+library(pwr)
+library(lme4)
+
+
+```
+
+
+# Import pilot data
+
+```{r}
+load(".RData")
+```
+
+
+
+
+Data preparation
+
+```{r}
+#standardize the variables in the pilot data
+pilot_data <- responses_pilot2 |> 
+    mutate(response_direction = scale(response_direction),
+           populist_attitudes = scale(populist_attitudes_index_4dim),
+           pro_netanyahu = ifelse(pro_netanyahu_coalition == "Netanyahu coalition", 1, 0) |> as_factor(),
+           pid = pid.x)
+
+sd(pilot_data$response_direction)           
+sd(pilot_data$populist_attitudes,na.rm = TRUE)           
+table(pilot_data$pro_netanyahu)
+hist(pilot_data$response_direction)
+hist(pilot_data$populist_attitudes)
+```
+
+
+
+## Main model for power analysis (without covariates):
+
+```{r}
+pilot_model <- lme4::lmer(response_direction ~ populist_attitudes * pro_netanyahu + (1 | pid),
+                    data = pilot_data)
+
+
+sjPlot::tab_model(pilot_model)
+```
+
+```{r}
+sjPlot::plot_model(pilot_model,type = "pred",terms = c("populist_attitudes", "pro_netanyahu"))
+```
+
+Multilevel linear model:
+'pilot_model <- lme4::lmer(response_direction ~ populist_attitudes * pro_netanyahu + (1 | pid),
+                    data = pilot_data)'
+
+Main effect of interest: Interaction between 'populist_attitudes' and 'pro_netanyahu'.
+
+Assumptions:
+- Minimal effect size of interest for interaction: Beta=-0.15 (standardized regression coefficient)
+- Alpha: 0.05 (# Two-tailed 0.10 ≈ one-tailed 0.05)
+- Power: 0.80
+- One-tailed test
+- Intraclass correlation (ICC) for random intercept (pid.x): 0.60
+- Number of data points per cluster (average number of responses per participant): 4
+
+
+Analyses conducted with assistance from julius.ai (using claude 4.5 sonnet) and chatGPT (GPT 5.1 model).
+
+
+# 1. Power analysis - pwr package approach
+
+```{r}
+
+# Power analysis for β = 0.15 with ONE-TAILED test
+# One-tailed test: alpha/2 becomes alpha (more power for directional hypothesis)
+
+beta_target <- -0.15
+icc <- 0.60
+m <- 4  # average cluster size
+deff <- 1 + (m - 1) * icc
+alpha_one_tailed <- 0.05  # For one-tailed, we use full alpha
+power_target <- 0.80
+
+u_without_covariates <- 2
+
+# Effect sizes (same as before)
+r2_interaction <- beta_target^2
+r2_full_without_cov <- 0.05  # Estimated R² for full model with covariates
+
+f2_without_cov <- r2_interaction / (1 - r2_full_without_cov)
+
+```
+
+
+```{r}
+pwr_without_cov_one_tailed <- pwr.f2.test(
+  u = u_without_covariates,
+  f2 = f2_without_cov,
+  sig.level = 0.10,  # Two-tailed 0.10 ≈ one-tailed 0.05
+  power = power_target
+)
+
+n_required_without_cov_unadjusted_1t <- ceiling(pwr_without_cov_one_tailed$v + u_without_covariates + 1)
+n_required_without_cov_adjusted_1t <- ceiling(n_required_without_cov_unadjusted_1t * deff)
+
+n_required_without_cov_adjusted_1t
+```
+
+
+
+
+---
+
+## 1. RESEARCH DESIGN
+
+### 1.1 Model Specification
+
+This power analysis is designed for a **linear mixed-effects model** testing the interaction between populist attitudes and political coalition support on response direction. Based on pilot data showing that demographic and political covariates do not significantly improve model fit, we employ a parsimonious model:
+
+**Model:**
+$$
+Y_{ij} = \beta_0 + \beta_1 X_{1ij} + \beta_2 X_{2ij} + \beta_3 (X_{1ij} \times X_{2ij}) + u_i + \epsilon_{ij}
+$$
+
+Where:
+- $Y_{ij}$ = Response direction for participant $i$ at observation $j$
+- $X_1$ = Populist attitudes (continuous)
+- $X_2$ = Pro-Netanyahu coalition support (binary)
+- $\beta_3$ = **Interaction effect of interest**
+- $u_i$ = Random intercept for participant $i$ (accounts for repeated measures)
+- $\epsilon_{ij}$ = Residual error
+
+### 1.2 Predictors
+
+The model includes **3 predictors**:
+1. **Populist attitudes** (main effect)
+2. **Pro-Netanyahu coalition support** (main effect)
+3. **Interaction term** (populist attitudes × coalition support)
+
+### 1.3 Rationale for Excluding Covariates
+
+Pilot data analysis (N = 300) revealed:
+- Model R² **without** covariates: 0.05
+- Model R² **with** covariates (ideology, gender, age, income, education): 0.06
+- **Minimal improvement**: Only 1% additional variance explained
+- **No significant covariates**: None of the 5 demographic/political covariates reached statistical significance
+- **Degrees of freedom cost**: Including covariates requires 37% larger sample size for equivalent power
+
+Following principles of **parsimony** and **statistical efficiency**, we exclude non-significant covariates that do not improve model fit.
+
+### 1.4 Repeated Measures Structure
+
+- **4 observations per participant** (within-subjects design)
+- **Intraclass Correlation Coefficient (ICC)**: 0.60
+  - High correlation within participants
+  - Substantial clustering effect requiring adjustment
+
+---
+
+## 2. POWER ANALYSIS METHODOLOGY
+
+### 2.1 Effect Size Specifications
+
+We conduct power analyses for **two plausible effect sizes** for the interaction term ($\beta_3$):
+
+1. **β = 0.15** (smaller, more conservative effect)
+2. **β = 0.20** (larger, more "optimistic" effect)
+
+These standardized regression coefficients represent the expected change in response direction (in standard deviation units) associated with a one-unit change in populist attitudes, comparing those who support vs. oppose the Netanyahu coalition.
+
+### 2.2 Conversion to Cohen's f²
+
+For power calculations using the `pwr` package in R, we convert standardized regression coefficients to **Cohen's f²**:
+
+$$
+f^2 = \frac{R^2_{\text{interaction}}}{1 - R^2_{\text{full}}}
+$$
+
+Where:
+- $R^2_{\text{interaction}} = \beta^2$ (variance uniquely explained by the interaction)
+- $R^2_{\text{full}} = 0.05$ (total variance explained by the full model, from pilot data)
+
+**Calculated effect sizes:**
+- For β = 0.15: $f^2 = \frac{0.15^2}{1 - 0.05} = \frac{0.0225}{0.95} = 0.0237$
+- For β = 0.20: $f^2 = \frac{0.20^2}{1 - 0.05} = \frac{0.04}{0.95} = 0.0421$
+
+### 2.3 Assumptions About Model R²
+
+The assumption that the full model explains **5% of variance** (R² = 0.05) is based on:
+- **Pilot study results** (N = 300, 4 observations per participant)
+- Regression model including both main effects and interaction
+- Realistic expectation for social science research on political attitudes
+
+---
+
+## 3. CLUSTERING ADJUSTMENT FOR REPEATED MEASURES
+
+### 3.1 Intraclass Correlation Coefficient (ICC)
+
+The **ICC = 0.60** indicates that 60% of the total variance in response direction is attributable to **between-participant differences**, while 40% is due to **within-participant variation** across the 4 observations.
+
+This high ICC reflects:
+- Strong individual consistency in response patterns
+- Substantial non-independence of observations within participants
+- Need for clustering adjustment in sample size calculations
+
+### 3.2 Design Effect (DEFF)
+
+The **Design Effect** quantifies the inflation in sample size needed due to clustering:
+
+$$
+\text{DEFF} = 1 + (m - 1) \times \text{ICC}
+$$
+
+Where:
+- $m = 4$ (average cluster size = observations per participant)
+- ICC = 0.60
+
+$$
+\text{DEFF} = 1 + (4 - 1) \times 0.60 = 1 + 1.8 = 2.8
+$$
+
+**Interpretation:** Due to clustering, we need **2.8 times as many participants** as would be required if observations were independent.
+
+### 3.3 Adjusted Sample Size Calculation
+
+$$
+N_{\text{adjusted}} = N_{\text{unadjusted}} \times \text{DEFF}
+$$
+
+This adjustment ensures adequate power while accounting for the reduced effective sample size due to within-participant correlation.
+
+---
+
+## 4. STATISTICAL TEST SPECIFICATIONS
+
+### 4.1 Test Type
+
+- **F-test** for the interaction term in multiple regression
+- **One-tailed test** (directional hypothesis)
+  - Approximated using two-tailed α = 0.10 in `pwr.f2.test()`
+  - Equivalent to one-tailed α = 0.05
+
+### 4.2 Significance Level and Power
+
+- **α = 0.05** (one-tailed)
+- **Target power = 0.80** (80% probability of detecting the effect if it exists)
+- **Degrees of freedom**: 
+  - Numerator df = 2 (number of predictors excluding the interaction)
+  - Denominator df = N - 3 (adjusted for clustering)
+
+### 4.3 Rationale for One-Tailed Test
+
+A one-tailed test is justified because:
+1. **Directional hypothesis**: Theory predicts a specific direction of the interaction
+2. **Prior research**: Existing literature supports the expected direction
+3. **Increased power**: One-tailed tests provide greater power for detecting effects in the predicted direction
+
+---
+
+## 5. RESULTS: REQUIRED SAMPLE SIZES
+
+### 5.1 Summary Table
+
+| Effect Size (β) | Cohen's f² | Unadjusted N | Adjusted N (DEFF = 2.8) |
+|-----------------|------------|--------------|-------------------------|
+| **0.15**        | 0.0237     | 328          | **919 participants**    |
+| **0.20**        | 0.0421     | 186          | **521 participants**    |
+
+### 5.2 Interpretation
+
+To achieve **80% power** to detect the interaction effect:
+
+- **Conservative estimate (β = 0.15)**: Requires **919 participants**
+  - Each providing 4 observations
+  - Total observations: 3,676
+
+- **Optimistic estimate (β = 0.20)**: Requires **521 participants**
+  - Each providing 4 observations
+  - Total observations: 2,084
+
+### 5.3 Current Sample Power
+
+With the current pilot sample of **300 participants**:
+- **Power for β = 0.15**: 38.8% (underpowered)
+- **Power for β = 0.20**: 57.9% (underpowered)
+
+The pilot study has insufficient power to reliably detect either effect size, highlighting the need for a larger main study.
+
+### 5.4 Comparison to Model With Covariates
+
+Excluding non-significant covariates provides substantial efficiency gains:
+
+| Effect Size | With Covariates | Without Covariates | Reduction |
+|-------------|-----------------|-------------------|-----------|
+| β = 0.15    | 1,462           | 919               | 37.1%     |
+| β = 0.20    | 832             | 521               | 37.4%     |
+
+By removing covariates that do not improve model fit, we reduce required sample size by **37%** while maintaining statistical rigor.
+
+---
+
+## 6. ASSUMPTIONS AND LIMITATIONS
+
+### 6.1 Key Assumptions
+
+1. **Linearity**: The relationship between predictors and outcome is linear
+2. **Normality**: Residuals are approximately normally distributed
+3. **Homoscedasticity**: Constant variance of residuals across predicted values
+4. **Independence**: Observations are independent across participants (but not within)
+5. **No multicollinearity**: Predictors are not highly correlated
+6. **Correct model specification**: The model includes all relevant predictors
+7. **ICC stability**: The ICC of 0.60 observed in pilot data generalizes to the main study
+8. **Effect size accuracy**: The true population effect size falls within the range tested (β = 0.15 to 0.20)
+
+### 6.2 Limitations
+
+1. **ICC estimation uncertainty**: ICC is estimated from pilot data (N = 300) and may vary in the full sample
+2. **Effect size uncertainty**: True effect size is unknown; we test plausible values based on theory
+3. **R² assumption**: Model R² may differ in the main study population
+4. **Attrition**: Power calculations assume no participant dropout; actual power may be lower if attrition occurs
+5. **Measurement error**: Assumes reliable measurement of all constructs
+6. **Generalizability**: Pilot data may not fully represent the target population
+
+---
+
+## 7. RECOMMENDATIONS
+
+### 7.1 Sample Size Target
+
+**Recommended target: 550-950 participants**
+
+- **Minimum (optimistic)**: 521 participants (for β = 0.20)
+- **Conservative target**: 919 participants (for β = 0.15)
+- **With 15% attrition buffer**: 600-1,060 participants
+
+### 7.2 Pre-Registration
+
+We recommend **pre-registering** the following:
+1. Exclusion of non-significant covariates based on pilot data
+2. Hypothesized direction of the interaction effect
+3. Planned sample size and power justification
+4. Analysis plan (mixed-effects model specification)
+
+### 7.3 Pilot Study Insights
+
+The pilot study (N = 300) provides valuable information:
+- **Model R² = 0.05** (realistic baseline for power calculations)
+- **ICC = 0.60** (high clustering requiring substantial adjustment)
+- **Covariates not significant** (justifies parsimonious model)
+- **Current power insufficient** (38.8% - 57.9% for target effects)
+
+### 7.4 Recruitment Strategy
+
+To achieve target sample size:
+- **Primary target**: 600-700 participants (balances feasibility and power)
+- **Stretch goal**: 900+ participants (maximizes power for smaller effects)
+- **Monitor recruitment**: Track enrollment and adjust if needed
+
+---
+
+## 8. SOFTWARE AND REPRODUCIBILITY
+
+### 8.1 R Packages Used
+
+- `pwr` (version 1.3-0): Power analysis calculations
+- `ggplot2` (version 3.4.0): Power curve visualization
+- `lme4` (for pilot data analysis): Mixed-effects models
+
+### 8.2 R Code Availability
+
+All power analysis code is available and reproducible. Key parameters:
+```r
+icc <- 0.60
+m <- 4  # observations per participant
+deff <- 1 + (m - 1) * icc  # = 2.8
+u <- 2  # number of predictors (excluding interaction)
+r2_full <- 0.05  # from pilot data
+alpha <- 0.10  # two-tailed (approximates one-tailed 0.05)
+power <- 0.80
+```
+
+### 8.3 References
+
+- Cohen, J. (1988). *Statistical Power Analysis for the Behavioral Sciences* (2nd ed.). Routledge.
+- Champely, S. (2020). pwr: Basic Functions for Power Analysis. R package version 1.3-0.
+- Snijders, T. A. B., & Bosker, R. J. (2012). *Multilevel Analysis: An Introduction to Basic and Advanced Multilevel Modeling* (2nd ed.). Sage.
+
+---
+
+## APPENDIX: POWER CURVE
+
+See accompanying figure: `power_curve_no_covariates.png`
+
+The power curve illustrates:
+- **X-axis**: Sample size (number of participants)
+- **Y-axis**: Statistical power (probability of detecting the effect)
+- **Two curves**: One for each effect size (β = 0.15 and β = 0.20)
+- **Horizontal dashed line**: 80% power threshold
+- **Vertical lines**: Current sample (N = 300) and required samples (N = 521, N = 919)
+
+```{r}
+# Generate updated power curve WITHOUT covariates
+library(ggplot2)
+library(pwr)
+
+# Parameters (updated - no covariates)
+icc <- 0.60
+m <- 4
+deff <- 1 + (m - 1) * icc
+u_without_covariates <- 2
+r2_full_without_cov <- 0.05
+alpha_one_tailed <- 0.10
+
+# Effect sizes
+beta_015 <- 0.15
+beta_020 <- 0.20
+
+f2_015 <- (beta_015^2) / (1 - r2_full_without_cov)
+f2_020 <- (beta_020^2) / (1 - r2_full_without_cov)
+
+# Create range of sample sizes
+sample_sizes <- seq(200, 1200, by = 25)
+
+# Calculate power for each sample size and effect size
+power_data <- data.frame()
+
+for (n in sample_sizes) {
+  n_effective <- n / deff
+  v <- n_effective - u_without_covariates - 1
+  
+  if (v > 0) {
+    # Power for β = 0.15
+    pwr_015 <- pwr.f2.test(
+      u = u_without_covariates,
+      v = v,
+      f2 = f2_015,
+      sig.level = alpha_one_tailed
+    )
+    
+    # Power for β = 0.20
+    pwr_020 <- pwr.f2.test(
+      u = u_without_covariates,
+      v = v,
+      f2 = f2_020,
+      sig.level = alpha_one_tailed
+    )
+    
+    power_data <- rbind(power_data, data.frame(
+      n = n,
+      power_015 = pwr_015$power,
+      power_020 = pwr_020$power
+    ))
+  }
+}
+
+# Current sample size
+current_n <- 300
+
+# Required sample sizes
+n_required_015 <- 919
+n_required_020 <- 521
+
+
+
+# Create the power curve plot
+library(ggplot2)
+library(tidyr)
+
+# Reshape data for plotting
+power_long <- pivot_longer(power_data, 
+                           cols = c(power_015, power_020),
+                           names_to = "effect_size",
+                           values_to = "power")
+
+power_long$effect_size <- factor(power_long$effect_size,
+                                 levels = c("power_015", "power_020"),
+                                 labels = c("β = 0.15", "β = 0.20"))
+
+# Create the plot
+p <- ggplot(power_long, aes(x = n, y = power, color = effect_size)) +
+  geom_line(size = 1.2) +
+  geom_hline(yintercept = 0.80, linetype = "dashed", color = "gray40", size = 0.8) +
+  geom_vline(xintercept = n_required_015, linetype = "dashed", color = "#F8766D", size = 0.8, alpha = 0.6) +
+  geom_vline(xintercept = n_required_020, linetype = "dashed", color = "#00BFC4", size = 0.8, alpha = 0.6) +
+  annotate("text", x = n_required_015 + 50, y = 0.15, label = "N = 919\
+(β = 0.15)", 
+           size = 3.5, color = "#F8766D") +
+  annotate("text", x = n_required_020 + 50, y = 0.15, label = "N = 521\
+(β = 0.20)", 
+           size = 3.5, color = "#00BFC4") +
+  annotate("text", x = 1100, y = 0.82, label = "80% Power", size = 3.5, color = "gray40") +
+  scale_y_continuous(labels = scales::percent_format(), breaks = seq(0, 1, 0.2)) +
+  scale_x_continuous(breaks = seq(200, 1200, 200)) +
+  labs(
+    title = "Statistical Power by Sample Size for Interaction Effect",
+    subtitle = "Model without covariates (R² = 0.05) | ICC = 0.60 | One-tailed test (α = 0.05)",
+    x = "Number of Participants",
+    y = "Statistical Power",
+    color = "Effect Size"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 10, color = "gray30"),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+
+
+p
+
+```
+
+---
+
+**Document prepared:** November 27, 2025  
+**Analysis conducted using:** R version 4.3.0  
+**Power analysis package:** pwr 1.3-0
+
+
+
+
+# 2. Simulation based approach for power analysis
+
+
+
+
+## 2.1 Base r simulation
+
+```{r, eval= FALSE}
+
+#Works in the consule but not in the qmd for some reason
+# ============================================================================
+# SIMULATION-BASED POWER ANALYSIS WITH ADJUSTED EFFECT SIZE (Beta = 0.15)
+# ============================================================================
+
+# Load required libraries
+library(lme4)
+library(dplyr)
+library(ggplot2)
+
+# ============================================================================
+# STEP 1: Load your pilot data and fit the initial model
+# ============================================================================
+
+# Replace with your actual data loading
+# pilot_data <- read.csv("your_pilot_data.csv")
+# Or if using SPSS data:
+# library(haven)
+# pilot_data <- read_sav("your_pilot_data.sav")
+
+# Fit the pilot model to get variance structure
+pilot_model <- lme4::lmer(response_direction ~ populist_attitudes * pro_netanyahu + (1 | pid),
+                    data = pilot_data)
+                
+
+# Check the pilot model
+print("=== Pilot Model Summary ===")
+print(summary(pilot_model))
+
+# Extract current parameters
+current_beta <- lme4::fixef(pilot_model)["populist_attitudes:pro_netanyahu1"]
+print(paste("\nCurrent pilot interaction effect:", round(current_beta, 4)))
+print(paste("Target interaction effect: -0.15"))
+
+# ============================================================================
+# STEP 2: Create adjusted model with Beta = -0.15
+# ============================================================================
+
+# Create a copy of the pilot model
+adjusted_model <- pilot_model
+
+# Set the interaction effect to exactly 0.15
+fixef(adjusted_model)["populist_attitudes:pro_netanyahu1"] <- -0.15
+
+print("\n=== Adjusted Model Fixed Effects ===")
+print(fixef(adjusted_model))
+
+# Verify the variance components are preserved
+print("\n=== Variance Components (from pilot) ===")
+print(VarCorr(adjusted_model))
+print(paste("Residual SD:", round(sigma(adjusted_model), 4)))
+
+# Calculate ICC
+var_components <- VarCorr(adjusted_model)
+var_pid <- as.numeric(var_components$pid)
+var_residual <- sigma(adjusted_model)^2
+icc <- var_pid / (var_pid + var_residual)
+print(paste("ICC:", round(icc, 3)))
+
+# ============================================================================
+# STEP 3: Manual power simulation function
+# ============================================================================
+
+run_power_simulation <- function(model, n_participants, n_sims = 200,
+                                 target_beta = -0.15, alpha = 0.05, seed = NULL) {
+
+  if (!is.null(seed)) set.seed(seed)
+
+  # Get original data from the model
+  original_data <- model@frame
+
+  # Store results
+  significant_count <- 0
+  p_values <- numeric(n_sims)
+  effect_sizes <- numeric(n_sims)
+
+  cat("Running", n_sims, "simulations at N =", n_participants, "...\n")
+
+  for (i in 1:n_sims) {
+
+    # Create extended dataset by resampling participants with replacement
+    sampled_pids <- sample(unique(original_data$pid), n_participants, replace = TRUE)
+
+    sim_data <- do.call(rbind, lapply(1:n_participants, function(j) {
+      pid_data <- original_data[original_data$pid == sampled_pids[j], ]
+      pid_data$pid <- factor(j)  # Assign new participant ID
+      return(pid_data)
+    }))
+
+    # Fit model to get the correct structure
+    temp_model <- lmer(response_direction ~ populist_attitudes * pro_netanyahu + (1 | pid),
+                       data = sim_data)
+
+    # Set the interaction effect to target beta
+    fixef(temp_model)["populist_attitudes:pro_netanyahu1"] <- target_beta
+
+    # Simulate new response variable from this adjusted model
+    sim_response <- simulate(temp_model, nsim = 1)[[1]]
+    sim_data$sim_response <- sim_response
+
+    # Fit model to the simulated data
+    fit_model <- lmer(sim_response ~ populist_attitudes * pro_netanyahu + (1 | pid),
+                      data = sim_data)
+
+    # Extract coefficient and t-value for the interaction
+    coef_sum <- summary(fit_model)$coefficients
+    beta_hat <- coef_sum["populist_attitudes:pro_netanyahu1", "Estimate"]
+    t_val <- coef_sum["populist_attitudes:pro_netanyahu1", "t value"]
+
+    # Store effect size
+    effect_sizes[i] <- beta_hat
+
+    # Calculate p-value (using t-distribution approximation)
+    df_approx <- nrow(sim_data) - nrow(coef_sum)
+    p_val <- 2 * pt(abs(t_val), df_approx, lower.tail = FALSE)
+    p_values[i] <- p_val
+
+    # Check if significant
+    if (p_val < alpha) {
+      significant_count <- significant_count + 1
+    }
+
+    # Progress indicator
+    if (i %% 50 == 0) {
+      cat("  Completed", i, "of", n_sims, "simulations\n")
+    }
+  }
+
+  # Calculate power estimate
+  power_est <- significant_count / n_sims
+
+  # Calculate 95% confidence interval for power using binomial test
+  ci <- binom.test(significant_count, n_sims)$conf.int
+
+  # Return results
+  return(list(
+    n = n_participants,
+    power = power_est,
+    lower_ci = ci[1],
+    upper_ci = ci[2],
+    sig_count = significant_count,
+    total_sims = n_sims,
+    p_values = p_values,
+    effect_sizes = effect_sizes,
+    mean_beta = mean(effect_sizes),
+    sd_beta = sd(effect_sizes)
+  ))
+}
+
+# ============================================================================
+# STEP 4: Run power analysis for a single sample size (test)
+# ============================================================================
+
+# Test with N = 300
+test_result <- run_power_simulation(
+  model = adjusted_model,
+  n_participants = 300,
+  n_sims = 200,
+  target_beta = -0.15,
+  seed = 2025
+)
+
+cat("\n=== Test Results at N = 300 ===\n")
+cat("Power:", round(test_result$power * 100, 1), "%\n")
+cat("95% CI: [", round(test_result$lower_ci * 100, 1), "%, ",
+    round(test_result$upper_ci * 100, 1), "%]\n", sep = "")
+cat("Significant results:", test_result$sig_count, "out of", test_result$total_sims, "\n")
+cat("Mean estimated beta:", round(test_result$mean_beta, 4), "\n")
+cat("SD of estimated beta:", round(test_result$sd_beta, 4), "\n")
+
+# ============================================================================
+# STEP 5: Run power curve across multiple sample sizes
+# ============================================================================
+
+# Define sample sizes to test
+sample_sizes <- c(300, 500, 700, 900, 1100)
+
+# Initialize results dataframe
+power_curve_results <- data.frame(
+  n = integer(),
+  power = numeric(),
+  lower_ci = numeric(),
+  upper_ci = numeric(),
+  sig_count = integer(),
+  mean_beta = numeric(),
+  sd_beta = numeric()
+)
+
+cat("\n=== Running Power Curve Analysis ===\n")
+cat("Testing sample sizes:", paste(sample_sizes, collapse = ", "), "\n")
+cat("Target interaction effect (Beta): 0.15\n")
+cat("Simulations per size: 200\n\n")
+
+# Run simulation for each sample size
+for (n in sample_sizes) {
+
+  cat("\n--- Sample Size N =", n, "---\n")
+
+  result <- run_power_simulation(
+    model = adjusted_model,
+    n_participants = n,
+    n_sims = 200,
+    target_beta = -0.15,
+    seed = 2025 + n  # Different seed for each size
+  )
+
+  # Add to results
+  power_curve_results <- rbind(power_curve_results, data.frame(
+    n = result$n,
+    power = result$power,
+    lower_ci = result$lower_ci,
+    upper_ci = result$upper_ci,
+    sig_count = result$sig_count,
+    mean_beta = result$mean_beta,
+    sd_beta = result$sd_beta
+  ))
+
+  cat("Power:", round(result$power * 100, 1), "%\n")
+}
+
+# ============================================================================
+# STEP 6: Display and format results
+# ============================================================================
+
+cat("\n\n=== COMPLETE POWER CURVE RESULTS (Beta = 0.15) ===\n")
+print(power_curve_results)
+
+# Create formatted table
+power_curve_results$power_pct <- paste0(round(power_curve_results$power * 100, 1), "%")
+power_curve_results$ci_95 <- paste0(
+  "[", round(power_curve_results$lower_ci * 100, 1), "%, ",
+  round(power_curve_results$upper_ci * 100, 1), "%]"
+)
+
+formatted_table <- power_curve_results[, c("n", "power_pct", "ci_95", "sig_count")]
+colnames(formatted_table) <- c("Sample Size", "Power", "95% CI", "Sig. Results (out of 200)")
+
+cat("\n=== Formatted Results Table ===\n")
+print(formatted_table, row.names = FALSE)
+
+# ============================================================================
+# STEP 7: Create power curve plot
+# ============================================================================
+
+power_plot <- ggplot(power_curve_results, aes(x = n, y = power)) +
+  geom_line(color = "blue", size = 1.2) +
+  geom_point(color = "blue", size = 3) +
+  geom_ribbon(aes(ymin = lower_ci, ymax = upper_ci), alpha = 0.2, fill = "blue") +
+  geom_hline(yintercept = 0.80, linetype = "dashed", color = "red", size = 0.8) +
+  geom_hline(yintercept = 0.90, linetype = "dashed", color = "orange", size = 0.8) +
+  annotate("text", x = max(sample_sizes), y = 0.80,
+           label = "80% power", hjust = 1.1, vjust = -0.5, color = "red") +
+  annotate("text", x = max(sample_sizes), y = 0.90,
+           label = "90% power", hjust = 1.1, vjust = -0.5, color = "orange") +
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.1),
+                     labels = scales::percent) +
+  scale_x_continuous(breaks = sample_sizes) +
+  labs(
+    title = "Power Curve for Interaction Effect",
+    subtitle = "Target effect size: β = 0.15 (standardized coefficient)",
+    x = "Sample Size (Number of Participants)",
+    y = "Statistical Power",
+    caption = "Shaded area represents 95% confidence interval\nBased on 200 simulations per sample size"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10),
+    panel.grid.minor = element_blank()
+  )
+
+print(power_plot)
+
+# ============================================================================
+# STEP 8: Find recommended sample sizes
+# ============================================================================
+
+# ============================================================================
+# SIMPLE POWER SIMULATION: N = 500, Beta = 0.15
+# ============================================================================
+
+library(lme4)
+
+# 1. FIT PILOT MODEL (using your actual data)
+pilot_model <- lmer(response_direction ~ populist_attitudes * pro_netanyahu + (1 | pid),
+                    data = pilot_data)
+
+# 2. SET PARAMETERS
+n_participants <- 1000
+target_beta <- -0.15
+n_sims <- 200
+alpha <- 0.05
+
+# 3. EXTRACT VARIANCE COMPONENTS FROM PILOT
+original_data <- pilot_model@frame
+var_components <- VarCorr(pilot_model)
+sigma_pid <- sqrt(as.numeric(var_components$pid))  # Random intercept SD
+sigma_residual <- sigma(pilot_model)  # Residual SD
+
+# 4. CREATE ADJUSTED FIXED EFFECTS
+pilot_fixef <- fixef(pilot_model)
+adjusted_fixef <- pilot_fixef
+adjusted_fixef["populist_attitudes:pro_netanyahu1"] <- target_beta
+
+# 5. RUN SIMULATIONS
+set.seed(2025)
+significant_count <- 0
+p_values <- numeric(n_sims)
+effect_sizes <- numeric(n_sims)
+
+for (i in 1:n_sims) {
+
+  # Resample participants with replacement
+  sampled_pids <- sample(unique(original_data$pid), n_participants, replace = TRUE)
+
+  # Create extended dataset
+  sim_data <- do.call(rbind, lapply(1:n_participants, function(j) {
+    pid_data <- original_data[original_data$pid == sampled_pids[j], ]
+    pid_data$pid <- factor(j)
+    return(pid_data)
+  }))
+
+  # Generate random effects for new participants
+  random_intercepts <- rnorm(n_participants, mean = 0, sd = sigma_pid)
+  sim_data$random_effect <- random_intercepts[as.numeric(sim_data$pid)]
+
+  # Generate response using adjusted fixed effects
+  X <- model.matrix(~ populist_attitudes * pro_netanyahu, data = sim_data)
+  mu <- X %*% adjusted_fixef + sim_data$random_effect
+  sim_data$sim_response <- mu + rnorm(nrow(sim_data), mean = 0, sd = sigma_residual)
+
+  # Fit model to simulated data
+  fit_model <- lmer(sim_response ~ populist_attitudes * pro_netanyahu + (1 | pid),
+                    data = sim_data)
+
+  # Extract results
+  coef_sum <- summary(fit_model)$coefficients
+  beta_hat <- coef_sum["populist_attitudes:pro_netanyahu1", "Estimate"]
+  t_val <- coef_sum["populist_attitudes:pro_netanyahu1", "t value"]
+
+  # Calculate p-value
+  df_approx <- nrow(sim_data) - nrow(coef_sum)
+  p_val <- 2 * pt(abs(t_val), df_approx, lower.tail = FALSE)
+
+  # Store results
+  p_values[i] <- p_val
+  effect_sizes[i] <- beta_hat
+
+  if (p_val < alpha) {
+    significant_count <- significant_count + 1
+  }
+
+  if (i %% 50 == 0) {
+    cat("Completed", i, "of", n_sims, "simulations\n")
+  }
+}
+
+# 6. CALCULATE POWER
+power_estimate <- significant_count / n_sims
+ci <- binom.test(significant_count, n_sims)$conf.int
+
+print(paste("POWER:", round(power_estimate * 100, 1), "%"))
+print(paste("95% CI: [", round(ci[1] * 100, 1), "%, ", round(ci[2] * 100, 1), "%]", sep=""))
+```
+
+
+
+```{r}
+#same thing but works in the qmd (because no fixef<-)
+# ============================================================================
+# SIMULATION-BASED POWER ANALYSIS WITH ADJUSTED EFFECT SIZE (Beta = 0.15)
+# ============================================================================
+
+# Load required libraries
+library(lme4)
+library(dplyr)
+library(ggplot2)
+
+# ============================================================================
+# STEP 1: Load your pilot data and fit the initial model
+# ============================================================================
+
+# Fit the pilot model to get variance structure
+pilot_model <- lme4::lmer(
+  response_direction ~ populist_attitudes * pro_netanyahu + (1 | pid),
+  data = pilot_data
+)
+
+# Check the pilot model
+print("=== Pilot Model Summary ===")
+print(summary(pilot_model))
+
+# Extract current parameters
+beta_pilot <- lme4::fixef(pilot_model)
+current_beta <- beta_pilot["populist_attitudes:pro_netanyahu1"]
+
+print(paste("\nCurrent pilot interaction effect:", round(current_beta, 4)))
+print(paste("Target interaction effect (absolute): 0.15"))
+
+# ============================================================================
+# STEP 2: Define target fixed effects and variance structure
+# ============================================================================
+
+# Choose target interaction beta (keep sign if you want a negative effect)
+target_beta <- -0.15   # or +0.15 if you want a positive interaction
+
+# Create a modified vector of fixed effects for simulation
+beta_target <- beta_pilot
+beta_target["populist_attitudes:pro_netanyahu1"] <- target_beta
+
+print("\n=== Pilot Fixed Effects ===")
+print(beta_pilot)
+
+print("\n=== Target Fixed Effects for Simulation ===")
+print(beta_target)
+
+# Extract variance components (used for simulation)
+var_components <- lme4::VarCorr(pilot_model)
+var_pid       <- as.numeric(var_components$pid)          # random intercept variance
+var_residual  <- stats::sigma(pilot_model)^2             # residual variance
+icc           <- var_pid / (var_pid + var_residual)
+
+print("\n=== Variance Components (from pilot) ===")
+print(var_components)
+print(paste("Residual SD:", round(stats::sigma(pilot_model), 4)))
+print(paste("ICC:", round(icc, 3)))
+
+# ============================================================================
+# STEP 3: Manual power simulation function (no fixef<-)
+# ============================================================================
+
+run_power_simulation <- function(pilot_model,
+                                 beta_target,
+                                 n_participants,
+                                 n_sims = 200,
+                                 alpha = 0.05,
+                                 seed = NULL) {
+
+  if (!is.null(seed)) base::set.seed(seed)
+
+  # Get original data from the model
+  original_data <- stats::model.frame(pilot_model)
+
+  # Extract variance components from pilot_model
+  vc          <- lme4::VarCorr(pilot_model)
+  tau2        <- as.numeric(vc$pid)
+  sigma2      <- stats::sigma(pilot_model)^2
+
+  # Storage
+  significant_count <- 0
+  p_values    <- numeric(n_sims)
+  effect_sizes <- numeric(n_sims)
+
+  cat("Running", n_sims, "simulations at N =", n_participants, "...\n")
+
+  for (i in seq_len(n_sims)) {
+
+    # -----------------------------
+    # 1. Resample participants
+    # -----------------------------
+    sampled_pids <- base::sample(unique(original_data$pid), n_participants, replace = TRUE)
+
+    sim_data <- do.call(rbind, lapply(seq_len(n_participants), function(j) {
+      pid_data <- original_data[original_data$pid == sampled_pids[j], ]
+      pid_data$pid <- factor(j)  # Assign new participant ID
+      pid_data
+    }))
+
+    # -----------------------------
+    # 2. Simulate random effects + residuals
+    # -----------------------------
+    # Random intercepts for each new participant
+    u_id <- stats::rnorm(n_participants, mean = 0, sd = sqrt(tau2))
+    u    <- u_id[sim_data$pid]
+
+    # Residual error
+    e <- stats::rnorm(nrow(sim_data), mean = 0, sd = sqrt(sigma2))
+
+    # -----------------------------
+    # 3. Generate linear predictor with target betas
+    # -----------------------------
+    X <- stats::model.matrix(~ populist_attitudes * pro_netanyahu, data = sim_data)
+
+    # Ensure ordering of beta_target matches columns of X
+    beta_sim <- beta_target[colnames(X)]
+
+    eta <- as.numeric(X %*% beta_sim) + as.numeric(u) + e
+    sim_data$sim_response <- eta
+
+    # -----------------------------
+    # 4. Fit model to simulated data
+    # -----------------------------
+    fit_model <- lme4::lmer(
+      sim_response ~ populist_attitudes * pro_netanyahu + (1 | pid),
+      data = sim_data
+    )
+
+    coef_sum <- summary(fit_model)$coefficients
+    beta_hat <- coef_sum["populist_attitudes:pro_netanyahu1", "Estimate"]
+    t_val    <- coef_sum["populist_attitudes:pro_netanyahu1", "t value"]
+
+    effect_sizes[i] <- beta_hat
+
+    # Approximate df
+    df_approx <- nrow(sim_data) - nrow(coef_sum)
+    p_val     <- 2 * stats::pt(abs(t_val), df_approx, lower.tail = FALSE)
+    p_values[i] <- p_val
+
+    # Two-sided alpha here; if you want one-sided (directional), use:
+    # p_val_one_sided <- stats::pt(t_val, df_approx, lower.tail = (target_beta > 0))
+    # and compare to alpha.
+    if (p_val < alpha) {
+      significant_count <- significant_count + 1
+    }
+
+    if (i %% 50 == 0) {
+      cat("  Completed", i, "of", n_sims, "simulations\n")
+    }
+  }
+
+  power_est <- significant_count / n_sims
+  ci <- stats::binom.test(significant_count, n_sims)$conf.int
+
+  list(
+    n          = n_participants,
+    power      = power_est,
+    lower_ci   = ci[1],
+    upper_ci   = ci[2],
+    sig_count  = significant_count,
+    total_sims = n_sims,
+    p_values   = p_values,
+    effect_sizes = effect_sizes,
+    mean_beta  = mean(effect_sizes),
+    sd_beta    = stats::sd(effect_sizes)
+  )
+}
+
+# ============================================================================
+# STEP 4: Run power analysis for a single sample size (test)
+# ============================================================================
+
+# Test with N = 300
+test_result <- run_power_simulation(
+  pilot_model   = pilot_model,
+  beta_target   = beta_target,
+  n_participants = 300,
+  n_sims        = 200,
+  alpha         = 0.05,
+  seed          = 2025
+)
+
+cat("\n=== Test Results at N = 300 ===\n")
+cat("Power:", round(test_result$power * 100, 1), "%\n")
+cat("95% CI: [", round(test_result$lower_ci * 100, 1), "%, ",
+    round(test_result$upper_ci * 100, 1), "%]\n", sep = "")
+cat("Significant results:", test_result$sig_count, "out of", test_result$total_sims, "\n")
+cat("Mean estimated beta:", round(test_result$mean_beta, 4), "\n")
+cat("SD of estimated beta:", round(test_result$sd_beta, 4), "\n")
+
+# ============================================================================
+# STEP 5: Run power curve across multiple sample sizes
+# ============================================================================
+
+sample_sizes <- c(500, 700, 900, 1100)
+
+power_curve_results <- data.frame(
+  n = integer(),
+  power = numeric(),
+  lower_ci = numeric(),
+  upper_ci = numeric(),
+  sig_count = integer(),
+  mean_beta = numeric(),
+  sd_beta = numeric()
+)
+
+cat("\n=== Running Power Curve Analysis ===\n")
+cat("Testing sample sizes:", paste(sample_sizes, collapse = ", "), "\n")
+cat("Target interaction effect (Beta):", target_beta, "\n")
+cat("Simulations per size: 200\n\n")
+
+for (n in sample_sizes) {
+
+  cat("\n--- Sample Size N =", n, "---\n")
+
+  result <- run_power_simulation(
+    pilot_model    = pilot_model,
+    beta_target    = beta_target,
+    n_participants = n,
+    n_sims         = 200,
+    alpha          = 0.05,
+    seed           = 2025 + n
+  )
+
+  power_curve_results <- rbind(power_curve_results, data.frame(
+    n        = result$n,
+    power    = result$power,
+    lower_ci = result$lower_ci,
+    upper_ci = result$upper_ci,
+    sig_count = result$sig_count,
+    mean_beta = result$mean_beta,
+    sd_beta   = result$sd_beta
+  ))
+
+  cat("Power:", round(result$power * 100, 1), "%\n")
+}
+
+# ============================================================================
+# STEP 6: Display and format results
+# ============================================================================
+
+cat("\n\n=== COMPLETE POWER CURVE RESULTS (Beta =", target_beta, ") ===\n")
+print(power_curve_results)
+
+power_curve_results$power_pct <- paste0(round(power_curve_results$power * 100, 1), "%")
+power_curve_results$ci_95 <- paste0(
+  "[", round(power_curve_results$lower_ci * 100, 1), "%, ",
+  round(power_curve_results$upper_ci * 100, 1), "%]"
+)
+
+formatted_table <- power_curve_results[, c("n", "power_pct", "ci_95", "sig_count")]
+colnames(formatted_table) <- c("Sample Size", "Power", "95% CI", "Sig. Results (out of 200)")
+
+cat("\n=== Formatted Results Table ===\n")
+print(formatted_table, row.names = FALSE)
+
+# ============================================================================
+# STEP 7: Create power curve plot
+# ============================================================================
+
+power_plot <- ggplot2::ggplot(power_curve_results, ggplot2::aes(x = n, y = power)) +
+  ggplot2::geom_line(size = 1.2) +
+  ggplot2::geom_point(size = 3) +
+  ggplot2::geom_ribbon(ggplot2::aes(ymin = lower_ci, ymax = upper_ci),
+                       alpha = 0.2) +
+  ggplot2::geom_hline(yintercept = 0.80, linetype = "dashed",
+                      size = 0.8, color = "red") +
+  ggplot2::geom_hline(yintercept = 0.90, linetype = "dashed",
+                      size = 0.8, color = "orange") +
+  ggplot2::annotate("text", x = max(sample_sizes), y = 0.80,
+                    label = "80% power", hjust = 1.1, vjust = -0.5, color = "red") +
+  ggplot2::annotate("text", x = max(sample_sizes), y = 0.90,
+                    label = "90% power", hjust = 1.1, vjust = -0.5, color = "orange") +
+  ggplot2::scale_y_continuous(limits = c(0, 1),
+                              breaks = seq(0, 1, 0.1),
+                              labels = scales::percent) +
+  ggplot2::scale_x_continuous(breaks = sample_sizes) +
+  ggplot2::labs(
+    title = "Power Curve for Interaction Effect",
+    subtitle = paste0("Target effect size: β = ", target_beta, " (standardized coefficient)"),
+    x = "Sample Size (Number of Participants)",
+    y = "Statistical Power",
+    caption = "Shaded area represents 95% confidence interval\nBased on 200 simulations per sample size"
+  ) +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(
+    plot.title    = ggplot2::element_text(size = 16, face = "bold"),
+    plot.subtitle = ggplot2::element_text(size = 12),
+    axis.title    = ggplot2::element_text(size = 12),
+    axis.text     = ggplot2::element_text(size = 10),
+    panel.grid.minor = ggplot2::element_blank()
+  )
+
+print(power_plot)
+
+```
+
+
+```{r}
+run_power_simulation <- function(pilot_model,
+                                 beta_target,
+                                 n_participants,
+                                 n_sims = 1000,
+                                 alpha_one_sided = 0.05,
+                                 n_rep = 4,
+                                 seed = NULL) {
+
+  if (!is.null(seed)) base::set.seed(seed)
+
+  # Get original data and variance components from pilot_model
+  original_data <- stats::model.frame(pilot_model)
+
+  vc      <- lme4::VarCorr(pilot_model)
+  tau2    <- as.numeric(vc$pid)
+  sigma2  <- stats::sigma(pilot_model)^2
+
+  # Name of interaction term
+  inter_name <- "populist_attitudes:pro_netanyahu1"
+  beta_int   <- beta_target[inter_name]
+
+  if (beta_int < 0) {
+    direction <- "negative"
+  } else if (beta_int > 0) {
+    direction <- "positive"
+  } else {
+    direction <- "zero"
+    message("Warning: interaction beta is 0; falling back to two-sided test.")
+  }
+
+  cat("Target interaction beta:", round(beta_int, 3),
+      " (direction:", direction, ")\n")
+  cat("Using one-tailed alpha =", alpha_one_sided, "\n")
+
+  # Storage
+  significant_count <- 0
+  p_values          <- numeric(n_sims)
+  effect_sizes      <- numeric(n_sims)
+
+  cat("Running", n_sims, "simulations at N =", n_participants, "...\n")
+
+  for (i in seq_len(n_sims)) {
+
+    # 1. Resample participants
+    sampled_pids <- base::sample(unique(original_data$pid),
+                                 size = n_participants,
+                                 replace = TRUE)
+
+    sim_data <- do.call(rbind, lapply(seq_len(n_participants), function(j) {
+      pid_data     <- original_data[original_data$pid == sampled_pids[j], ]
+      pid_data$pid <- factor(j)
+      pid_data
+    }))
+
+    # 2. Simulate random intercepts + residuals
+    u_id <- stats::rnorm(n_participants, mean = 0, sd = sqrt(tau2))
+    u    <- u_id[sim_data$pid]
+
+    e <- stats::rnorm(nrow(sim_data), mean = 0, sd = sqrt(sigma2))
+
+    # 3. Linear predictor with target betas
+    X <- stats::model.matrix(~ populist_attitudes * pro_netanyahu, data = sim_data)
+    beta_sim <- beta_target[colnames(X)]
+
+    eta <- as.numeric(X %*% beta_sim) + as.numeric(u) + e
+    sim_data$sim_response <- eta
+
+    # 4. Fit model and test interaction
+    fit_model <- lme4::lmer(
+      sim_response ~ populist_attitudes * pro_netanyahu + (1 | pid),
+      data = sim_data
+    )
+
+    coef_sum <- summary(fit_model)$coefficients
+    beta_hat <- coef_sum[inter_name, "Estimate"]
+    t_val    <- coef_sum[inter_name, "t value"]
+
+    effect_sizes[i] <- beta_hat
+
+    df_approx <- nrow(sim_data) - nrow(coef_sum)
+
+    # ONE-TAILED p-value based on sign of target beta
+    if (direction == "negative") {
+      p_one_sided <- stats::pt(t_val, df_approx, lower.tail = TRUE)
+    } else if (direction == "positive") {
+      p_one_sided <- stats::pt(t_val, df_approx, lower.tail = FALSE)
+    } else {
+      # Fallback: two-sided
+      p_one_sided <- 2 * stats::pt(abs(t_val), df_approx, lower.tail = FALSE)
+    }
+
+    p_values[i] <- p_one_sided
+
+    if (p_one_sided < alpha_one_sided) {
+      significant_count <- significant_count + 1
+    }
+
+    if (i %% 50 == 0) {
+      cat("  Completed", i, "of", n_sims, "simulations\n")
+    }
+  }
+
+  power_est <- significant_count / n_sims
+  ci <- stats::binom.test(significant_count, n_sims)$conf.int
+
+  list(
+    n          = n_participants,
+    power      = power_est,
+    lower_ci   = ci[1],
+    upper_ci   = ci[2],
+    sig_count  = significant_count,
+    total_sims = n_sims,
+    p_values   = p_values,
+    effect_sizes = effect_sizes,
+    mean_beta  = mean(effect_sizes),
+    sd_beta    = stats::sd(effect_sizes),
+    alpha_one_sided = alpha_one_sided,
+    beta_target     = beta_int
+  )
+}
+
+
+```
+
+```{r}
+run_power_simulation <- function(pilot_model,
+                                 beta_target,
+                                 n_participants,
+                                 n_sims = 1000,
+                                 alpha_one_sided = 0.05,
+                                 n_rep = 4,
+                                 seed = NULL) {
+
+  if (!is.null(seed)) base::set.seed(seed)
+
+  # Get original data and variance components from pilot_model
+  original_data <- stats::model.frame(pilot_model)
+
+  vc      <- lme4::VarCorr(pilot_model)
+  tau2    <- as.numeric(vc$pid)
+  sigma2  <- stats::sigma(pilot_model)^2
+
+  # Name of interaction term
+  inter_name <- "populist_attitudes:pro_netanyahu1"
+  beta_int   <- beta_target[inter_name]
+
+  if (beta_int < 0) {
+    direction <- "negative"
+  } else if (beta_int > 0) {
+    direction <- "positive"
+  } else {
+    direction <- "zero"
+    message("Warning: interaction beta is 0; falling back to two-sided test.")
+  }
+
+  cat("Target interaction beta:", round(beta_int, 3),
+      " (direction:", direction, ")\n")
+  cat("Using one-tailed alpha =", alpha_one_sided, "\n")
+
+  # Storage
+  significant_count <- 0
+  p_values          <- numeric(n_sims)
+  effect_sizes      <- numeric(n_sims)
+
+  cat("Running", n_sims, "simulations at N =", n_participants, "...\n")
+
+  for (i in seq_len(n_sims)) {
+
+    # 1. Resample participants
+    sampled_pids <- base::sample(unique(original_data$pid),
+                                 size = n_participants,
+                                 replace = TRUE)
+
+    sim_data <- do.call(rbind, lapply(seq_len(n_participants), function(j) {
+      pid_data     <- original_data[original_data$pid == sampled_pids[j], ]
+      pid_data$pid <- factor(j)
+      pid_data
+    }))
+
+    # 2. Simulate random intercepts + residuals
+    u_id <- stats::rnorm(n_participants, mean = 0, sd = sqrt(tau2))
+    u    <- u_id[sim_data$pid]
+
+    e <- stats::rnorm(nrow(sim_data), mean = 0, sd = sqrt(sigma2))
+
+    # 3. Linear predictor with target betas
+    X <- stats::model.matrix(~ populist_attitudes * pro_netanyahu, data = sim_data)
+    beta_sim <- beta_target[colnames(X)]
+
+    eta <- as.numeric(X %*% beta_sim) + as.numeric(u) + e
+    sim_data$sim_response <- eta
+
+    # 4. Fit model and test interaction
+    fit_model <- lme4::lmer(
+      sim_response ~ populist_attitudes * pro_netanyahu + (1 | pid),
+      data = sim_data
+    )
+
+    coef_sum <- summary(fit_model)$coefficients
+    beta_hat <- coef_sum[inter_name, "Estimate"]
+    t_val    <- coef_sum[inter_name, "t value"]
+
+    effect_sizes[i] <- beta_hat
+
+    df_approx <- nrow(sim_data) - nrow(coef_sum)
+
+    # ONE-TAILED p-value based on sign of target beta
+    if (direction == "negative") {
+      p_one_sided <- stats::pt(t_val, df_approx, lower.tail = TRUE)
+    } else if (direction == "positive") {
+      p_one_sided <- stats::pt(t_val, df_approx, lower.tail = FALSE)
+    } else {
+      # Fallback: two-sided
+      p_one_sided <- 2 * stats::pt(abs(t_val), df_approx, lower.tail = FALSE)
+    }
+
+    p_values[i] <- p_one_sided
+
+    if (p_one_sided < alpha_one_sided) {
+      significant_count <- significant_count + 1
+    }
+
+    if (i %% 50 == 0) {
+      cat("  Completed", i, "of", n_sims, "simulations\n")
+    }
+  }
+
+  power_est <- significant_count / n_sims
+  ci <- stats::binom.test(significant_count, n_sims)$conf.int
+
+  list(
+    n          = n_participants,
+    power      = power_est,
+    lower_ci   = ci[1],
+    upper_ci   = ci[2],
+    sig_count  = significant_count,
+    total_sims = n_sims,
+    p_values   = p_values,
+    effect_sizes = effect_sizes,
+    mean_beta  = mean(effect_sizes),
+    sd_beta    = stats::sd(effect_sizes),
+    alpha_one_sided = alpha_one_sided,
+    beta_target     = beta_int
+  )
+}
+
+
+
+# ============================================================================
+# STEP 4: Run power analysis for a single sample size (test)
+# ============================================================================
+
+# Test with N = 300
+test_result <- run_power_simulation(
+  pilot_model   = pilot_model,
+  beta_target   = beta_target,
+  n_participants = 300,
+  n_sims        = 200,
+  alpha         = 0.05,
+  seed          = 2025
+)
+
+cat("\n=== Test Results at N = 300 ===\n")
+cat("Power:", round(test_result$power * 100, 1), "%\n")
+cat("95% CI: [", round(test_result$lower_ci * 100, 1), "%, ",
+    round(test_result$upper_ci * 100, 1), "%]\n", sep = "")
+cat("Significant results:", test_result$sig_count, "out of", test_result$total_sims, "\n")
+cat("Mean estimated beta:", round(test_result$mean_beta, 4), "\n")
+cat("SD of estimated beta:", round(test_result$sd_beta, 4), "\n")
+
+# ============================================================================
+# STEP 5: Run power curve across multiple sample sizes
+# ============================================================================
+
+sample_sizes <- c(500, 700, 900, 1100)
+
+power_curve_results <- data.frame(
+  n = integer(),
+  power = numeric(),
+  lower_ci = numeric(),
+  upper_ci = numeric(),
+  sig_count = integer(),
+  mean_beta = numeric(),
+  sd_beta = numeric()
+)
+
+cat("\n=== Running Power Curve Analysis ===\n")
+cat("Testing sample sizes:", paste(sample_sizes, collapse = ", "), "\n")
+cat("Target interaction effect (Beta):", target_beta, "\n")
+cat("Simulations per size: 200\n\n")
+
+for (n in sample_sizes) {
+
+  cat("\n--- Sample Size N =", n, "---\n")
+
+  result <- run_power_simulation(
+    pilot_model    = pilot_model,
+    beta_target    = beta_target,
+    n_participants = n,
+    n_sims         = 200,
+    alpha          = 0.05,
+    seed           = 2025 + n
+  )
+
+  power_curve_results <- rbind(power_curve_results, data.frame(
+    n        = result$n,
+    power    = result$power,
+    lower_ci = result$lower_ci,
+    upper_ci = result$upper_ci,
+    sig_count = result$sig_count,
+    mean_beta = result$mean_beta,
+    sd_beta   = result$sd_beta
+  ))
+
+  cat("Power:", round(result$power * 100, 1), "%\n")
+}
+
+# ============================================================================
+# STEP 6: Display and format results
+# ============================================================================
+
+cat("\n\n=== COMPLETE POWER CURVE RESULTS (Beta =", target_beta, ") ===\n")
+print(power_curve_results)
+
+power_curve_results$power_pct <- paste0(round(power_curve_results$power * 100, 1), "%")
+power_curve_results$ci_95 <- paste0(
+  "[", round(power_curve_results$lower_ci * 100, 1), "%, ",
+  round(power_curve_results$upper_ci * 100, 1), "%]"
+)
+
+formatted_table <- power_curve_results[, c("n", "power_pct", "ci_95", "sig_count")]
+colnames(formatted_table) <- c("Sample Size", "Power", "95% CI", "Sig. Results (out of 200)")
+
+cat("\n=== Formatted Results Table ===\n")
+print(formatted_table, row.names = FALSE)
+
+# ============================================================================
+# STEP 7: Create power curve plot
+# ============================================================================
+
+power_plot <- ggplot2::ggplot(power_curve_results, ggplot2::aes(x = n, y = power)) +
+  ggplot2::geom_line(size = 1.2) +
+  ggplot2::geom_point(size = 3) +
+  ggplot2::geom_ribbon(ggplot2::aes(ymin = lower_ci, ymax = upper_ci),
+                       alpha = 0.2) +
+  ggplot2::geom_hline(yintercept = 0.80, linetype = "dashed",
+                      size = 0.8, color = "red") +
+  ggplot2::geom_hline(yintercept = 0.90, linetype = "dashed",
+                      size = 0.8, color = "orange") +
+  ggplot2::annotate("text", x = max(sample_sizes), y = 0.80,
+                    label = "80% power", hjust = 1.1, vjust = -0.5, color = "red") +
+  ggplot2::annotate("text", x = max(sample_sizes), y = 0.90,
+                    label = "90% power", hjust = 1.1, vjust = -0.5, color = "orange") +
+  ggplot2::scale_y_continuous(limits = c(0, 1),
+                              breaks = seq(0, 1, 0.1),
+                              labels = scales::percent) +
+  ggplot2::scale_x_continuous(breaks = sample_sizes) +
+  ggplot2::labs(
+    title = "Power Curve for Interaction Effect",
+    subtitle = paste0("Target effect size: β = ", target_beta, " (standardized coefficient)"),
+    x = "Sample Size (Number of Participants)",
+    y = "Statistical Power",
+    caption = "Shaded area represents 95% confidence interval\nBased on 200 simulations per sample size"
+  ) +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(
+    plot.title    = ggplot2::element_text(size = 16, face = "bold"),
+    plot.subtitle = ggplot2::element_text(size = 12),
+    axis.title    = ggplot2::element_text(size = 12),
+    axis.text     = ggplot2::element_text(size = 10),
+    panel.grid.minor = ggplot2::element_blank()
+  )
+
+print(power_plot)
+
+```
+
+
+
+## 2.2  `simr` approach
+
+```{r, eval= FALSE}
+#Works in the consule but not in the qmd for some reason (probably because of fixef<-)
+
+# ============================================================================
+# SIMULATION-BASED POWER ANALYSIS FOR MULTILEVEL MODEL
+# ============================================================================
+
+# Load required libraries
+library(lme4)
+library(simr)
+library(dplyr)
+
+
+# ============================================================================
+# STEP 1: Load your pilot data and fit the initial model
+# ============================================================================
+
+# Replace with your actual data loading
+# pilot_data <- read.csv("your_pilot_data.csv")
+# Or if using SPSS data:
+# library(haven)
+# pilot_data <- read_sav("your_pilot_data.sav")
+
+
+
+# Create a copy of the pilot model
+adjusted_model <- pilot_model
+
+# Set the interaction effect to exactly 0.15
+fixef(adjusted_model)["populist_attitudes:pro_netanyahu1"] <- -0.15
+
+print("\n=== Adjusted Model Fixed Effects ===")
+print(fixef(adjusted_model))
+
+# Verify the variance components are preserved
+print("\n=== Variance Components (from pilot) ===")
+print(VarCorr(adjusted_model))
+print(paste("Residual SD:", round(sigma(adjusted_model), 4)))
+
+# Calculate ICC
+var_components <- VarCorr(adjusted_model)
+var_pid <- as.numeric(var_components$pid)
+var_residual <- sigma(adjusted_model)^2
+icc <- var_pid / (var_pid + var_residual)
+print(paste("ICC:", round(icc, 3)))
+
+
+# ============================================================================
+# STEP 2: Manual Power Simulation Function
+# ============================================================================
+
+manual_power_sim <- function(adjusted_model, n_participants, n_sims = 200, seed = 2025) {
+
+  set.seed(seed)
+
+  # Get original data
+  original_data <- adjusted_model@frame
+
+  # Store results
+  significant_count <- 0
+  p_values <- numeric(n_sims)
+
+  cat("Running", n_sims, "simulations at N =", n_participants, "...\n")
+
+  for (i in 1:n_sims) {
+    # Create extended dataset by resampling participants
+    sampled_pids <- sample(unique(original_data$pid), n_participants, replace = TRUE)
+
+    sim_data <- do.call(rbind, lapply(1:n_participants, function(j) {
+      pid_data <- original_data[original_data$pid == sampled_pids[j], ]
+      pid_data$pid <- factor(j)
+      return(pid_data)
+    }))
+
+    # Fit model to get structure
+    temp_model <- lmer(response_direction ~ populist_attitudes * pro_netanyahu + (1 | pid),
+                       data = sim_data)
+
+    # Simulate new response from this model
+    sim_response <- simulate(temp_model, nsim = 1)[[1]]
+    sim_data$sim_response <- sim_response
+
+    # Fit model to simulated data
+    fit_model <- lmer(sim_response ~ populist_attitudes * pro_netanyahu + (1 | pid),
+                      data = sim_data)
+
+    # Extract t-value for interaction
+    coef_sum <- summary(fit_model)$coefficients
+    t_val <- coef_sum["populist_attitudes:pro_netanyahu1", "t value"]
+
+    # Calculate p-value (approximate)
+    df_approx <- nrow(sim_data) - nrow(coef_sum)
+    p_val <- 2 * pt(abs(t_val), df_approx, lower.tail = FALSE)
+    p_values[i] <- p_val
+
+    if (p_val < 0.05) {
+      significant_count <- significant_count + 1
+    }
+
+    # Progress indicator
+    if (i %% 20 == 0) {
+      cat("Completed", i, "of", n_sims, "simulations\n")
+    }
+  }
+
+  # Calculate power and confidence interval
+  power_estimate <- significant_count / n_sims
+  ci <- binom.test(significant_count, n_sims)$conf.int
+
+  # Return results
+  return(list(
+    n = n_participants,
+    power = power_estimate,
+    ci_lower = ci[1],
+    ci_upper = ci[2],
+    sig_count = significant_count,
+    total_sims = n_sims,
+    p_values = p_values
+  ))
+}
+
+# ============================================================================
+# STEP 3: Run power analysis for a single sample size
+# ============================================================================
+
+# Test at N = 400
+power_400 <- manual_power_sim(adjusted_model, n_participants = 400, n_sims = 200)
+
+cat("\n=== Power Results at N = 400 ===\n")
+cat("Power:", round(power_400$power * 100, 1), "%\n")
+cat("95% CI: [", round(power_400$ci_lower * 100, 1), "%, ",
+    round(power_400$ci_upper * 100, 1), "%]\n", sep="")
+cat("Significant results:", power_400$sig_count, "out of", power_400$total_sims, "\n")
+
+# ============================================================================
+# STEP 4: Run power curve across multiple sample sizes
+# ============================================================================
+
+sample_sizes <- c(500, 700, 900, 1100)
+power_curve_results <- data.frame(
+  n = integer(),
+  power = numeric(),
+  lower_ci = numeric(),
+  upper_ci = numeric(),
+  sig_count = integer()
+)
+
+cat("\n=== Running Power Curve Analysis ===\n")
+cat("Testing sample sizes:", paste(sample_sizes, collapse = ", "), "\n\n")
+
+for (n in sample_sizes) {
+  cat("\n--- Testing N =", n, "---\n")
+
+  result <- manual_power_sim(adjusted_model, n_participants = n, n_sims = 200, seed = 123 + n)
+
+  power_curve_results <- rbind(power_curve_results, data.frame(
+    n = result$n,
+    power = result$power,
+    lower_ci = result$ci_lower,
+    upper_ci = result$ci_upper,
+    sig_count = result$sig_count
+  ))
+
+  cat("Power:", round(result$power * 100, 1), "%\n")
+}
+
+# ============================================================================
+# STEP 5: Visualize power curve
+# ============================================================================
+
+# Create power curve plot
+library(ggplot2)
+
+ggplot(power_curve_results, aes(x = n, y = power)) +
+  geom_line(size = 1.2, color = "steelblue") +
+  geom_point(size = 3, color = "steelblue") +
+  geom_ribbon(aes(ymin = lower_ci, ymax = upper_ci), alpha = 0.2, fill = "steelblue") +
+  geom_hline(yintercept = 0.80, linetype = "dashed", color = "red", size = 0.8) +
+  geom_hline(yintercept = 0.90, linetype = "dashed", color = "darkred", size = 0.8) +
+  scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
+  labs(
+    title = "Power Curve for Populist Attitudes × Pro-Netanyahu Interaction",
+    subtitle = "Based on 200 simulations per sample size",
+    x = "Sample Size (Number of Participants)",
+    y = "Statistical Power",
+    caption = "Dashed lines indicate 80% and 90% power thresholds"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    panel.grid.minor = element_blank()
+  )
+
+# ============================================================================
+# STEP 6: Display results table
+# ============================================================================
+
+cat("\n=== Complete Power Curve Results ===\n")
+print(power_curve_results)
+
+# Format for presentation
+power_curve_results$power_pct <- paste0(round(power_curve_results$power * 100, 1), "%")
+power_curve_results$ci_pct <- paste0(
+  "[", round(power_curve_results$lower_ci * 100, 1), "%, ",
+  round(power_curve_results$upper_ci * 100, 1), "%]"
+)
+
+print(power_curve_results[, c("n", "power_pct", "ci_pct", "sig_count")])
+
+# ============================================================================
+# STEP 7: Find sample size for target power
+# ============================================================================
+
+find_sample_size_for_power <- function(target_power = 0.80) {
+  # Interpolate to find sample size
+  if (max(power_curve_results$power) < target_power) {
+    cat("Target power of", target_power, "not achieved in tested range.\n")
+    cat("Consider testing larger sample sizes.\n")
+    return(NULL)
+  }
+
+  # Find the two points that bracket the target power
+  below <- power_curve_results[power_curve_results$power < target_power, ]
+  above <- power_curve_results[power_curve_results$power >= target_power, ]
+
+  if (nrow(below) == 0) {
+    return(min(power_curve_results$n))
+  }
+
+  n_below <- max(below$n)
+  n_above <- min(above$n)
+  power_below <- below$power[below$n == n_below]
+  power_above <- above$power[above$n == n_above]
+
+  # Linear interpolation
+  n_target <- n_below + (target_power - power_below) / (power_above - power_below) * (n_above - n_below)
+
+  return(ceiling(n_target))
+}
+
+n_for_80 <- find_sample_size_for_power(0.80)
+
+
+cat("\n=== Recommended Sample Sizes ===\n")
+cat("For 80% power:", n_for_80, "participants\n")
+
+```
+
+
+
+```{r}
+# ============================================================================
+# STEP 2: Manual Power Simulation Function (simr-style, using pilot_model + beta_target)
+# ============================================================================
+
+manual_power_sim <- function(pilot_model,
+                             beta_target,
+                             n_participants,
+                             n_sims = 200,
+                             alpha = 0.05,
+                             seed = 2025) {
+
+  if (!is.null(seed)) base::set.seed(seed)
+
+  # Original data and variance components from pilot_model
+  original_data <- stats::model.frame(pilot_model)
+
+  vc      <- lme4::VarCorr(pilot_model)
+  tau2    <- as.numeric(vc$pid)              # random intercept variance
+  sigma2  <- stats::sigma(pilot_model)^2     # residual variance
+
+  # Storage
+  significant_count <- 0
+  p_values          <- numeric(n_sims)
+
+  cat("Running", n_sims, "simulations at N =", n_participants, "...\n")
+
+  for (i in seq_len(n_sims)) {
+
+    # ---------------------------------------------------
+    # 1. Resample participants with replacement
+    # ---------------------------------------------------
+    sampled_pids <- base::sample(unique(original_data$pid),
+                                 size = n_participants,
+                                 replace = TRUE)
+
+    sim_data <- do.call(rbind, lapply(seq_len(n_participants), function(j) {
+      pid_data      <- original_data[original_data$pid == sampled_pids[j], ]
+      pid_data$pid  <- factor(j)   # new participant ID
+      pid_data
+    }))
+
+    # ---------------------------------------------------
+    # 2. Simulate new outcome with target beta
+    # ---------------------------------------------------
+    # Random intercepts for each simulated participant
+    u_id <- stats::rnorm(n_participants, mean = 0, sd = sqrt(tau2))
+    u    <- u_id[sim_data$pid]
+
+    # Residual error
+    e <- stats::rnorm(nrow(sim_data), mean = 0, sd = sqrt(sigma2))
+
+    # Design matrix for fixed effects
+    X <- stats::model.matrix(~ populist_attitudes * pro_netanyahu, data = sim_data)
+
+    # Ensure betas are aligned with columns of X
+    beta_sim <- beta_target[colnames(X)]
+
+    # Linear predictor + random effects + noise
+    eta <- as.numeric(X %*% beta_sim) + as.numeric(u) + e
+    sim_data$sim_response <- eta
+
+    # ---------------------------------------------------
+    # 3. Fit model to simulated data and test interaction
+    # ---------------------------------------------------
+    fit_model <- lme4::lmer(
+      sim_response ~ populist_attitudes * pro_netanyahu + (1 | pid),
+      data = sim_data
+    )
+
+    coef_sum <- summary(fit_model)$coefficients
+    t_val    <- coef_sum["populist_attitudes:pro_netanyahu1", "t value"]
+
+    # Approximate df
+    df_approx <- nrow(sim_data) - nrow(coef_sum)
+
+    # Two-sided p-value; for one-sided, adjust accordingly
+    p_val <- 2 * stats::pt(abs(t_val), df_approx, lower.tail = FALSE)
+    p_values[i] <- p_val
+
+    if (p_val < alpha) {
+      significant_count <- significant_count + 1
+    }
+
+    if (i %% 20 == 0) {
+      cat("  Completed", i, "of", n_sims, "simulations\n")
+    }
+  }
+
+  power_estimate <- significant_count / n_sims
+  ci <- stats::binom.test(significant_count, n_sims)$conf.int
+
+  list(
+    n          = n_participants,
+    power      = power_estimate,
+    ci_lower   = ci[1],
+    ci_upper   = ci[2],
+    sig_count  = significant_count,
+    total_sims = n_sims,
+    p_values   = p_values
+  )
+}
+
+# ============================================================================
+# STEP 3: Run power analysis for a single sample size
+# ============================================================================
+
+# Example: test at N = 400 (uses pilot_model + beta_target from previous chunk)
+power_400 <- manual_power_sim(
+  pilot_model   = pilot_model,
+  beta_target   = beta_target,
+  n_participants = 400,
+  n_sims        = 200,
+  alpha         = 0.05,
+  seed          = 2025
+)
+
+cat("\n=== Power Results at N = 400 ===\n")
+cat("Power:", round(power_400$power * 100, 1), "%\n")
+cat("95% CI: [", round(power_400$ci_lower * 100, 1), "%, ",
+    round(power_400$ci_upper * 100, 1), "%]\n", sep = "")
+cat("Significant results:", power_400$sig_count, "out of", power_400$total_sims, "\n")
+
+# ============================================================================
+# STEP 4: Run power curve across multiple sample sizes
+# ============================================================================
+
+sample_sizes <- c(500, 700, 900, 1100)
+
+power_curve_results <- data.frame(
+  n        = integer(),
+  power    = numeric(),
+  lower_ci = numeric(),
+  upper_ci = numeric(),
+  sig_count = integer()
+)
+
+cat("\n=== Running Power Curve Analysis (manual_power_sim) ===\n")
+cat("Testing sample sizes:", paste(sample_sizes, collapse = ", "), "\n\n")
+
+for (n in sample_sizes) {
+  cat("\n--- Testing N =", n, "---\n")
+
+  result <- manual_power_sim(
+    pilot_model    = pilot_model,
+    beta_target    = beta_target,
+    n_participants = n,
+    n_sims         = 200,
+    alpha          = 0.05,
+    seed           = 2025 + n
+  )
+
+  power_curve_results <- rbind(power_curve_results, data.frame(
+    n        = result$n,
+    power    = result$power,
+    lower_ci = result$ci_lower,
+    upper_ci = result$ci_upper,
+    sig_count = result$sig_count
+  ))
+
+  cat("Power:", round(result$power * 100, 1), "%\n")
+}
+
+# ============================================================================
+# STEP 5: Visualize power curve
+# ============================================================================
+
+ggplot2::ggplot(power_curve_results,
+                ggplot2::aes(x = n, y = power)) +
+  ggplot2::geom_line(size = 1.2, color = "steelblue") +
+  ggplot2::geom_point(size = 3, color = "steelblue") +
+  ggplot2::geom_ribbon(ggplot2::aes(ymin = lower_ci, ymax = upper_ci),
+                       alpha = 0.2, fill = "steelblue") +
+  ggplot2::geom_hline(yintercept = 0.80, linetype = "dashed",
+                      color = "red", size = 0.8) +
+  ggplot2::geom_hline(yintercept = 0.90, linetype = "dashed",
+                      color = "darkred", size = 0.8) +
+  ggplot2::scale_y_continuous(limits = c(0, 1),
+                              labels = scales::percent) +
+  ggplot2::labs(
+    title = "Power Curve for Populist Attitudes × Pro-Netanyahu Interaction",
+    subtitle = "Based on 200 simulations per sample size",
+    x = "Sample Size (Number of Participants)",
+    y = "Statistical Power",
+    caption = "Dashed lines indicate 80% and 90% power thresholds"
+  ) +
+  ggplot2::theme_minimal(base_size = 12) +
+  ggplot2::theme(
+    plot.title        = ggplot2::element_text(face = "bold", size = 14),
+    panel.grid.minor  = ggplot2::element_blank()
+  )
+
+# ============================================================================
+# STEP 6: Display results table
+# ============================================================================
+
+cat("\n=== Complete Power Curve Results (manual_power_sim) ===\n")
+print(power_curve_results)
+
+power_curve_results$power_pct <- paste0(round(power_curve_results$power * 100, 1), "%")
+power_curve_results$ci_pct <- paste0(
+  "[", round(power_curve_results$lower_ci * 100, 1), "%, ",
+  round(power_curve_results$upper_ci * 100, 1), "%]"
+)
+
+print(power_curve_results[, c("n", "power_pct", "ci_pct", "sig_count")])
+
+# ============================================================================
+# STEP 7: Find sample size for target power
+# ============================================================================
+
+find_sample_size_for_power <- function(target_power = 0.80) {
+
+  if (max(power_curve_results$power) < target_power) {
+    cat("Target power of", target_power, "not achieved in tested range.\n")
+    cat("Consider testing larger sample sizes.\n")
+    return(NULL)
+  }
+
+  below <- power_curve_results[power_curve_results$power < target_power, ]
+  above <- power_curve_results[power_curve_results$power >= target_power, ]
+
+  if (nrow(below) == 0) {
+    return(min(power_curve_results$n))
+  }
+
+  n_below      <- max(below$n)
+  n_above      <- min(above$n)
+  power_below  <- below$power[below$n == n_below]
+  power_above  <- above$power[above$n == n_above]
+
+  n_target <- n_below +
+    (target_power - power_below) / (power_above - power_below) * (n_above - n_below)
+
+  ceiling(n_target)
+}
+
+n_for_80 <- find_sample_size_for_power(0.80)
+
+cat("\n=== Recommended Sample Sizes (manual_power_sim) ===\n")
+cat("For 80% power:", n_for_80, "participants\n")
+
+```
+
+
+```{r}
+manual_power_sim <- function(pilot_model,
+                             beta_target,
+                             n_participants,
+                             n_sims = 200,
+                             alpha_one_sided = 0.05,
+                             seed = 2025) {
+
+  if (!is.null(seed)) base::set.seed(seed)
+
+  # Original data and variance components from pilot_model
+  original_data <- stats::model.frame(pilot_model)
+
+  vc      <- lme4::VarCorr(pilot_model)
+  tau2    <- as.numeric(vc$pid)
+  sigma2  <- stats::sigma(pilot_model)^2
+
+  # Interaction term
+  inter_name <- "populist_attitudes:pro_netanyahu1"
+  beta_int   <- beta_target[inter_name]
+
+  if (beta_int < 0) {
+    direction <- "negative"
+  } else if (beta_int > 0) {
+    direction <- "positive"
+  } else {
+    direction <- "zero"
+    message("Warning: interaction beta is 0; falling back to two-sided test.")
+  }
+
+  cat("Target interaction beta:", round(beta_int, 3),
+      " (direction:", direction, ")\n")
+  cat("Using one-tailed alpha =", alpha_one_sided, "\n")
+  cat("Running", n_sims, "simulations at N =", n_participants, "...\n")
+
+  significant_count <- 0
+  p_values          <- numeric(n_sims)
+
+  for (i in seq_len(n_sims)) {
+
+    # 1. Resample participants
+    sampled_pids <- base::sample(unique(original_data$pid),
+                                 size = n_participants,
+                                 replace = TRUE)
+
+    sim_data <- do.call(rbind, lapply(seq_len(n_participants), function(j) {
+      pid_data     <- original_data[original_data$pid == sampled_pids[j], ]
+      pid_data$pid <- factor(j)
+      pid_data
+    }))
+
+    # 2. Simulate from target model
+    u_id <- stats::rnorm(n_participants, mean = 0, sd = sqrt(tau2))
+    u    <- u_id[sim_data$pid]
+
+    e <- stats::rnorm(nrow(sim_data), mean = 0, sd = sqrt(sigma2))
+
+    X <- stats::model.matrix(~ populist_attitudes * pro_netanyahu, data = sim_data)
+    beta_sim <- beta_target[colnames(X)]
+
+    eta <- as.numeric(X %*% beta_sim) + as.numeric(u) + e
+    sim_data$sim_response <- eta
+
+    # 3. Fit model and test interaction
+    fit_model <- lme4::lmer(
+      sim_response ~ populist_attitudes * pro_netanyahu + (1 | pid),
+      data = sim_data
+    )
+
+    coef_sum <- summary(fit_model)$coefficients
+    t_val    <- coef_sum[inter_name, "t value"]
+
+    df_approx <- nrow(sim_data) - nrow(coef_sum)
+
+    # ONE-TAILED p based on direction
+    if (direction == "negative") {
+      p_one_sided <- stats::pt(t_val, df_approx, lower.tail = TRUE)
+    } else if (direction == "positive") {
+      p_one_sided <- stats::pt(t_val, df_approx, lower.tail = FALSE)
+    } else {
+      p_one_sided <- 2 * stats::pt(abs(t_val), df_approx, lower.tail = FALSE)
+    }
+
+    p_values[i] <- p_one_sided
+
+    if (p_one_sided < alpha_one_sided) {
+      significant_count <- significant_count + 1
+    }
+
+    if (i %% 20 == 0) {
+      cat("  Completed", i, "of", n_sims, "simulations\n")
+    }
+  }
+
+  power_estimate <- significant_count / n_sims
+  ci <- stats::binom.test(significant_count, n_sims)$conf.int
+
+  list(
+    n          = n_participants,
+    power      = power_estimate,
+    ci_lower   = ci[1],
+    ci_upper   = ci[2],
+    sig_count  = significant_count,
+    total_sims = n_sims,
+    p_values   = p_values,
+    alpha_one_sided = alpha_one_sided,
+    beta_target     = beta_int
+  )
+}
+
+
+
+
+# ============================================================================
+# STEP 3: Run power analysis for a single sample size
+# ============================================================================
+
+# Example: test at N = 400 (uses pilot_model + beta_target from previous chunk)
+power_400 <- manual_power_sim(
+  pilot_model   = pilot_model,
+  beta_target   = beta_target,
+  n_participants = 400,
+  n_sims        = 200,
+  alpha         = 0.05,
+  seed          = 2025
+)
+
+cat("\n=== Power Results at N = 400 ===\n")
+cat("Power:", round(power_400$power * 100, 1), "%\n")
+cat("95% CI: [", round(power_400$ci_lower * 100, 1), "%, ",
+    round(power_400$ci_upper * 100, 1), "%]\n", sep = "")
+cat("Significant results:", power_400$sig_count, "out of", power_400$total_sims, "\n")
+
+# ============================================================================
+# STEP 4: Run power curve across multiple sample sizes
+# ============================================================================
+
+sample_sizes <- c(500, 700, 900, 1100)
+
+power_curve_results <- data.frame(
+  n        = integer(),
+  power    = numeric(),
+  lower_ci = numeric(),
+  upper_ci = numeric(),
+  sig_count = integer()
+)
+
+cat("\n=== Running Power Curve Analysis (manual_power_sim) ===\n")
+cat("Testing sample sizes:", paste(sample_sizes, collapse = ", "), "\n\n")
+
+for (n in sample_sizes) {
+  cat("\n--- Testing N =", n, "---\n")
+
+  result <- manual_power_sim(
+    pilot_model    = pilot_model,
+    beta_target    = beta_target,
+    n_participants = n,
+    n_sims         = 200,
+    alpha          = 0.05,
+    seed           = 2025 + n
+  )
+
+  power_curve_results <- rbind(power_curve_results, data.frame(
+    n        = result$n,
+    power    = result$power,
+    lower_ci = result$ci_lower,
+    upper_ci = result$ci_upper,
+    sig_count = result$sig_count
+  ))
+
+  cat("Power:", round(result$power * 100, 1), "%\n")
+}
+
+# ============================================================================
+# STEP 5: Visualize power curve
+# ============================================================================
+
+ggplot2::ggplot(power_curve_results,
+                ggplot2::aes(x = n, y = power)) +
+  ggplot2::geom_line(size = 1.2, color = "steelblue") +
+  ggplot2::geom_point(size = 3, color = "steelblue") +
+  ggplot2::geom_ribbon(ggplot2::aes(ymin = lower_ci, ymax = upper_ci),
+                       alpha = 0.2, fill = "steelblue") +
+  ggplot2::geom_hline(yintercept = 0.80, linetype = "dashed",
+                      color = "red", size = 0.8) +
+  ggplot2::geom_hline(yintercept = 0.90, linetype = "dashed",
+                      color = "darkred", size = 0.8) +
+  ggplot2::scale_y_continuous(limits = c(0, 1),
+                              labels = scales::percent) +
+  ggplot2::labs(
+    title = "Power Curve for Populist Attitudes × Pro-Netanyahu Interaction",
+    subtitle = "Based on 200 simulations per sample size",
+    x = "Sample Size (Number of Participants)",
+    y = "Statistical Power",
+    caption = "Dashed lines indicate 80% and 90% power thresholds"
+  ) +
+  ggplot2::theme_minimal(base_size = 12) +
+  ggplot2::theme(
+    plot.title        = ggplot2::element_text(face = "bold", size = 14),
+    panel.grid.minor  = ggplot2::element_blank()
+  )
+
+# ============================================================================
+# STEP 6: Display results table
+# ============================================================================
+
+cat("\n=== Complete Power Curve Results (manual_power_sim) ===\n")
+print(power_curve_results)
+
+power_curve_results$power_pct <- paste0(round(power_curve_results$power * 100, 1), "%")
+power_curve_results$ci_pct <- paste0(
+  "[", round(power_curve_results$lower_ci * 100, 1), "%, ",
+  round(power_curve_results$upper_ci * 100, 1), "%]"
+)
+
+print(power_curve_results[, c("n", "power_pct", "ci_pct", "sig_count")])
+
+# ============================================================================
+# STEP 7: Find sample size for target power
+# ============================================================================
+
+find_sample_size_for_power <- function(target_power = 0.80) {
+
+  if (max(power_curve_results$power) < target_power) {
+    cat("Target power of", target_power, "not achieved in tested range.\n")
+    cat("Consider testing larger sample sizes.\n")
+    return(NULL)
+  }
+
+  below <- power_curve_results[power_curve_results$power < target_power, ]
+  above <- power_curve_results[power_curve_results$power >= target_power, ]
+
+  if (nrow(below) == 0) {
+    return(min(power_curve_results$n))
+  }
+
+  n_below      <- max(below$n)
+  n_above      <- min(above$n)
+  power_below  <- below$power[below$n == n_below]
+  power_above  <- above$power[above$n == n_above]
+
+  n_target <- n_below +
+    (target_power - power_below) / (power_above - power_below) * (n_above - n_below)
+
+  ceiling(n_target)
+}
+
+n_for_80 <- find_sample_size_for_power(0.80)
+
+cat("\n=== Recommended Sample Sizes (manual_power_sim) ===\n")
+cat("For 80% power:", n_for_80, "participants\n")
+
+```
+
