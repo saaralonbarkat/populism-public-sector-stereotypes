@@ -452,6 +452,7 @@ hist(wave1$populist_attitudes_index_4dim_minimum)
 wave1 |> 
   ggplot(aes(x = populist_attitudes_index_4dim)) +
   geom_histogram(binwidth = 0.1, fill = "blue", color = "black", alpha = 0.7) +
+  geom_vline(xintercept = 0.5, color = "red", linetype = "dashed",size=1) +
   labs(
     x = "Populist Attitudes Index (4 dimensions)",
     y = "Count",
@@ -530,6 +531,7 @@ wave1 %>%
   geom_point(alpha=0.2) +
   stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
       stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+        geom_hline(yintercept = 0.5, color = "red", linetype = "dashed",size=1) +
 coord_flip() +
   labs(
     x = NULL,
@@ -608,6 +610,7 @@ wave1 %>%
   geom_point(alpha=0.2) +
   stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
       stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+              geom_hline(yintercept = 0.5, color = "red", linetype = "dashed",size=1) +
 coord_flip() +
   labs(
     x = NULL,
@@ -624,6 +627,7 @@ wave1 %>%
   geom_point(alpha=0.2) +
   stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
       stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+              geom_hline(yintercept = 0.5, color = "red", linetype = "dashed",size=1) +
 coord_flip() +
   labs(
     x = NULL,
@@ -1267,7 +1271,11 @@ sjPlot::tab_model(model_1,model_2,model_3,model_4,
 ```
 
 ```{r}
-sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4dim", "pro_netanyahu_coalition"))
+sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4dim", "pro_netanyahu_coalition"))+
+  labs(title="Trust in Civil Service",
+  x="Populist attitudes index",
+  color="Partisanship")+
+  theme_classic()
 ```
 
 ```{r}
@@ -1277,7 +1285,7 @@ anova(model_4)
 ```{r}
 model_1 <- lm(trust_civil_service ~ anti_elitism + pro_netanyahu_coalition + right_left_ideology ,wave1 %>% labelled::remove_labels(),na.rm=T)
 
-model_2 <- model_1 %>% update(.~.+populist_attitudes_index_4dim*(pro_netanyahu_coalition))
+model_2 <- model_1 %>% update(.~.+anti_elitism*(pro_netanyahu_coalition))
 
 model_3 <- model_1 %>% update(.~.+ 
   female +
@@ -1287,7 +1295,7 @@ model_3 <- model_1 %>% update(.~.+
                 external_efficecy+
                 subjective_social_economic_status +
                 affective_polarization)
-model_4 <- model_3 %>% update(.~.+populist_attitudes_index_4dim*(pro_netanyahu_coalition))
+model_4 <- model_3 %>% update(.~.+anti_elitism*(pro_netanyahu_coalition))
 
 
 
@@ -1298,7 +1306,7 @@ sjPlot::tab_model(model_1,model_2,model_3,model_4,
 ```
 
 ```{r}
-sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4dim", "pro_netanyahu_coalition"))
+sjPlot::plot_model(model_4,type = "pred",terms = c("anti_elitism", "pro_netanyahu_coalition"))
 ```
 
 
@@ -1373,7 +1381,8 @@ sjPlot::tab_model(model_1,model_2,model_3,model_4,
 ```
 
 ```{r}
-sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4dim", "pro_netanyahu_coalition"))
+sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4dim", "pro_netanyahu_coalition"))+
+  labs(title="Trust in Media")
 ```
 
 ```{r}
@@ -1416,6 +1425,12 @@ sjPlot::plot_model(model_4,type = "pred",terms = c("anti_elitism", "coalition_pa
 
 
 # Conspiracy
+
+```{r}
+wave1 %>% labelled::to_factor() |> 
+  dplyr::select(conspiracy_deep_state,conspiracy_vaccine,coalition_party_vote_intention) %>% 
+  gtsummary::tbl_summary(by=coalition_party_vote_intention)
+```
 
 ```{r}
 ##ggplot2 histogram of conspiracy beliefs
