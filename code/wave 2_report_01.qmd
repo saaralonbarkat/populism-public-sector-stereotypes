@@ -1,7 +1,7 @@
 ---
-title: "Populism stereotype wave 1"
+title: "Populism stereotype wave 2"
 author: "Saar Alon-Barkat"
-date: "January 2025"
+date: "February 2025"
 format:
   html:
     self-contained: true
@@ -246,7 +246,7 @@ waves_combined_labs %>%
 
 ```{r}
 waves_combined_labs %>%
-  dplyr::select(friendly_scale:general_image_social,civil_servant_label
+  dplyr::select(friendly_scale:general_image_social,civil_servant_elite_wave2,civil_servant_label
          ) %>%
   tbl_summary(by=civil_servant_label,
     missing_text = "Missing"
@@ -257,12 +257,63 @@ waves_combined_labs %>%
 
 ```{r}
 waves_combined_labs %>%
-  dplyr::select(friendly_scale:general_image_social,
+  dplyr::select(friendly_scale:general_image_social,civil_servant_elite_wave2
          ) %>%
  sjPlot::tab_corr(
     triangle = "lower",
  )
 ```
+
+```{r}
+waves_combined_labs %>%
+  dplyr::select(civil_servant_elite_wave2,elite_group_civil_servants,high_status_scale:traditional,
+         ) %>%
+ sjPlot::tab_corr(
+    triangle = "lower",
+ )
+```
+
+
+
+### 2 factor
+
+```{r}
+
+cfa.model.2factor_ster <- '
+  communion =~ friendly_scale+sociable_scale + trustworthy_scale+fair_scale
+  agency =~ competent_scale+skilled_scale+assertive_scale+goal_oriented_scale'
+  
+fit.cfa.model.2factor_ster <- cfa(
+  cfa.model.2factor_ster, # model formula,
+  data = wave2,
+  se = "robust",
+  std.lv = T
+)
+
+summary(fit.cfa.model.2factor_ster, fit.measures = TRUE, standardize = TRUE)
+```
+
+
+### 4 factor
+
+```{r}
+
+cfa.model.4factor_ster <- '
+  Sociability =~ friendly_scale+sociable_scale 
+  Morality =~ trustworthy_scale+fair_scale
+  Ability =~ competent_scale+skilled_scale
+  Assertiveness =~ assertive_scale+goal_oriented_scale'
+  
+fit.cfa.model.4factor_ster <- cfa(
+  cfa.model.4factor_ster, # model formula,
+  data = wave2,
+  se = "robust",
+  std.lv = T
+)
+
+summary(fit.cfa.model.4factor_ster, fit.measures = TRUE, standardize = TRUE)
+```
+
 
 
 # Politicization items
@@ -285,3 +336,16 @@ waves_combined_labs %>%
     triangle = "lower",
  )
 ```
+
+
+```{r}
+wave2 |> labelled::remove_labels() |> 
+  dplyr::select(politicization_3:politicization_6) |> 
+  sjPlot::tab_itemscale()
+
+wave2 |> labelled::remove_labels() |> 
+  dplyr::select(politicization_3:politicization_5) |> 
+  sjPlot::tab_itemscale()
+
+```
+
