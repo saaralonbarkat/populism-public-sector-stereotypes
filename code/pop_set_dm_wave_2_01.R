@@ -12,6 +12,7 @@ wave2 <- wave2_data_raw %>%
   filter(qid4==1) %>% 
   mutate(pid_w2 = 1:n()) |> 
   
+  mutate(duration_in_minutes_w2 = (duration_in_seconds/60) %>% round(1)) %>% 
 # Randomization labels
   
   mutate(civil_servant_label = case_when(
@@ -82,3 +83,4 @@ waves_combined <- wave1 |> dplyr::select(i_user3,pid:psm_aps) |>
 
 
 save.image()
+
