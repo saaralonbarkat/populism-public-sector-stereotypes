@@ -1,0 +1,287 @@
+---
+title: "Populism stereotype wave 1"
+author: "Saar Alon-Barkat"
+date: "January 2025"
+format:
+  html:
+    self-contained: true
+    code-fold: true
+    toc: true
+    toc-location: left
+execute:
+  message: false
+  warning: false
+---
+
+
+```{r}
+library(tidyverse)
+library(gt)
+library(gtsummary)
+library(sjPlot)
+library(haven)
+library(labelled)
+library(codebook)
+library(janitor)
+library(lavaan)
+```
+
+Import data
+
+```{r}
+load(".RData")
+```
+
+
+# sample
+
+```{r}
+# יצירת labels למשתנים
+waves_combined_labs <- waves_combined %>% remove_labels() %>%
+  mutate(
+    gender_label = case_when(
+      gender == 1 ~ "Male",
+      gender == 2 ~ "Female",
+      gender == 3 ~ "Other",
+      TRUE ~ NA_character_
+    ),
+    age_group_label = case_when(
+      age_group == 1 ~ "18-24",
+      age_group == 2 ~ "25-34",
+      age_group == 3 ~ "35-44",
+      age_group == 4 ~ "45-54",
+      age_group == 5 ~ "55-64",
+      age_group == 6 ~ "65+",
+      TRUE ~ NA_character_
+    ),
+    education_label = case_when(
+      education == 1 ~ "1.Elementary or less",
+      education == 2 ~ "2.No high school disploma",
+      education == 3 ~ "3.High school disploma",
+      education == 4 ~ "4.Post high school",
+      education == 5 ~ "5.College education (no degree)",
+      education == 6 ~ "6.Bachelor's degree",
+      education == 7 ~ "7.Master's degree",
+      education == 8 ~ "8.Doctorate degree",
+      TRUE ~ NA_character_
+    ),
+    income_label = case_when(
+      income == 1 ~ "1.Much below average",
+      income == 2 ~ "2.Below average",
+      income == 3 ~ "3.Average",
+      income == 4 ~ "4.Above average",
+      income == 5 ~ "5.Much above average",
+      TRUE ~ NA_character_
+    ),
+    sector_employment_label = case_when(
+      sector_employment == 1 ~ "Public sector",
+      sector_employment == 2 ~ "Private sector",
+      sector_employment == 3 ~ "Third sector",
+      sector_employment == 4 ~ "Self-employed",
+      sector_employment == 5 ~ "Not employed",
+      sector_employment == 6 ~ "Other",
+      TRUE ~ NA_character_
+    ),
+    religiosity_label = case_when(
+      religiosity == 1 ~ "5.Ultra Orthodox (Charedi)",
+      religiosity == 2 ~ "4.Religious",
+      religiosity == 3 ~ "4.Religious",
+      religiosity == 4 ~ "3.Traditional religious",
+      religiosity == 5 ~ "2.Traditional not religious",
+      religiosity == 6 ~ "1.Secular",
+      TRUE ~ NA_character_
+    )
+  )
+
+```
+
+```{r}
+# בחירת משתנים דמוגרפיים
+waves_combined_labs %>%
+  dplyr::select(gender_label, age_group_label, religiosity_label,education_label, income_label, 
+         sector_employment_label, public_sector_employee_current, 
+         public_sector_experience, right_left_ideology,coalition_party_vote_intention,return_wave2,completed_wave2,completed_stereotypes_wave2,duration_in_minutes,duration_in_minutes_w2
+         ) %>%
+  tbl_summary(
+    label = list(
+      gender_label ~ "Gender",
+      age_group_label ~ "Age Group",
+      religiosity_label ~ "Religiosity",
+      education_label ~ "Education",
+      income_label ~ "Income (relative to average)",
+      sector_employment_label ~ "Employment Sector",
+      public_sector_employee_current ~ "Currently employed in public sector",
+      public_sector_experience ~ "Any public sector experience",
+      right_left_ideology ~ "Right-Left Ideology (1=extreme right, 7=extreme left)"
+    ),
+    missing_text = "Missing"
+  ) %>%
+  modify_caption("**Table 1. Sample Demographics**") %>%
+  bold_labels()
+
+```
+
+
+
+Returning to wave 2
+```{r}
+# בחירת משתנים דמוגרפיים
+waves_combined_labs %>%
+  dplyr::select(gender_label, age_group_label, religiosity_label,education_label, income_label, 
+         sector_employment_label, public_sector_employee_current, 
+         public_sector_experience, right_left_ideology,coalition_party_vote_intention,return_wave2,completed_wave2,duration_in_minutes_w2
+         ) %>%
+  tbl_summary(by=return_wave2,
+    label = list(
+      age_group_label ~ "Age Group",
+      religiosity_label ~ "Religiosity",
+      education_label ~ "Education",
+      income_label ~ "Income (relative to average)",
+      sector_employment_label ~ "Employment Sector",
+      public_sector_employee_current ~ "Currently employed in public sector",
+      public_sector_experience ~ "Any public sector experience",
+      right_left_ideology ~ "Right-Left Ideology (1=extreme right, 7=extreme left)"
+    ),
+    missing_text = "Missing"
+  ) %>%
+  modify_caption("**Table 1. Sample Demographics**") %>%
+  bold_labels()
+
+```
+
+
+
+Returning to wave 2 and completed stereotypes
+```{r}
+# בחירת משתנים דמוגרפיים
+waves_combined_labs %>%
+  dplyr::select(gender_label, age_group_label, religiosity_label,education_label, income_label, 
+         sector_employment_label, public_sector_employee_current, 
+         public_sector_experience, right_left_ideology,coalition_party_vote_intention,return_wave2,completed_wave2,completed_stereotypes_wave2,duration_in_minutes_w2
+         ) %>%
+  tbl_summary(by=completed_stereotypes_wave2,
+    label = list(
+      age_group_label ~ "Age Group",
+      religiosity_label ~ "Religiosity",
+      education_label ~ "Education",
+      income_label ~ "Income (relative to average)",
+      sector_employment_label ~ "Employment Sector",
+      public_sector_employee_current ~ "Currently employed in public sector",
+      public_sector_experience ~ "Any public sector experience",
+      right_left_ideology ~ "Right-Left Ideology (1=extreme right, 7=extreme left)"
+    ),
+    missing_text = "Missing"
+  ) %>%
+  modify_caption("**Table 1. Sample Demographics**") %>%
+  bold_labels()
+
+```
+
+
+Completed wave 2
+```{r}
+# בחירת משתנים דמוגרפיים
+waves_combined_labs %>%
+  dplyr::select(gender_label, age_group_label, religiosity_label,education_label, income_label, 
+         sector_employment_label, public_sector_employee_current, 
+         public_sector_experience, right_left_ideology,coalition_party_vote_intention,return_wave2,completed_wave2,completed_stereotypes_wave2,duration_in_minutes,duration_in_minutes_w2
+         ) %>%
+  tbl_summary(by=completed_wave2,
+    label = list(
+      age_group_label ~ "Age Group",
+      religiosity_label ~ "Religiosity",
+      education_label ~ "Education",
+      income_label ~ "Income (relative to average)",
+      sector_employment_label ~ "Employment Sector",
+      public_sector_employee_current ~ "Currently employed in public sector",
+      public_sector_experience ~ "Any public sector experience",
+      right_left_ideology ~ "Right-Left Ideology (1=extreme right, 7=extreme left)"
+    ),
+    missing_text = "Missing"
+  ) %>%
+  modify_caption("**Table 1. Sample Demographics**") %>%
+  bold_labels()
+
+```
+
+
+Duration of wave 2
+```{r}
+waves_combined %>%
+    mutate(duration_in_minutes_w2 = ifelse(duration_in_minutes_w2>30,30,duration_in_minutes_w2)) %>%
+    ggplot(aes(x = duration_in_minutes_w2)) +
+    geom_histogram(binwidth = 1, fill = "blue", color = "black") +
+    labs(title = "Distribution of Duration in Wave 2",
+         x = "Duration in Minutes (Truncated at 30 minutes)",
+         y = "Frequency")
+```
+
+
+# Random assignment to labels in wave 2
+
+```{r}
+waves_combined_labs %>%
+  dplyr::select(gender_label, age_group_label, religiosity_label,education_label, income_label, 
+         sector_employment_label, public_sector_employee_current, 
+         public_sector_experience, right_left_ideology,coalition_party_vote_intention,return_wave2,completed_wave2,completed_stereotypes_wave2,duration_in_minutes,duration_in_minutes_w2,civil_servant_label,entity_2,entity_3
+         ) %>%
+  tbl_summary(by=civil_servant_label,
+    label = list(
+      age_group_label ~ "Age Group",
+      religiosity_label ~ "Religiosity",
+      education_label ~ "Education",
+      income_label ~ "Income (relative to average)",
+      sector_employment_label ~ "Employment Sector",
+      public_sector_employee_current ~ "Currently employed in public sector",
+      public_sector_experience ~ "Any public sector experience",
+      right_left_ideology ~ "Right-Left Ideology (1=extreme right, 7=extreme left)"
+    ),
+    missing_text = "Missing"
+  ) %>%
+  modify_caption("**Table 1. Sample Demographics**") %>%
+  bold_labels()
+```
+
+# Stereotypes scales
+
+```{r}
+waves_combined_labs %>%
+  dplyr::select(friendly_scale:general_image_social,civil_servant_label
+         ) %>%
+  tbl_summary(by=civil_servant_label,
+    missing_text = "Missing"
+  ) %>%
+  modify_caption("**Table 1. Sample Demographics**") %>%
+  bold_labels()
+```
+
+```{r}
+waves_combined_labs %>%
+  dplyr::select(friendly_scale:general_image_social,
+         ) %>%
+ sjPlot::tab_corr(
+    triangle = "lower",
+ )
+```
+
+
+# Politicization items
+
+```{r}
+waves_combined_labs %>%  
+  dplyr::select(politicization_1:politicization_6,trust_civil_service_wave2
+         ) %>%
+  tbl_summary(missing_text = "Missing"
+  ) %>%
+  modify_caption("**Table 1. Sample Demographics**") %>%
+  bold_labels()
+```
+
+```{r}
+waves_combined_labs %>%
+  dplyr::select(politicization_1:politicization_6,trust_civil_service_wave2
+         ) %>%
+ sjPlot::tab_corr(
+    triangle = "lower",
+ )
+```
