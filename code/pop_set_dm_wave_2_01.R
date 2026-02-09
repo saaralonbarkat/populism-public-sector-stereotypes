@@ -74,12 +74,18 @@ public_private_sector_performance = q38
   politicization_5 = q41_5,
   politicization_6 = q41_6
 ) |> 
-  mutate(public_service_work_information = ifelse(q33==1,1,0))
+  mutate(public_service_work_information = ifelse(q33==1,1,0)) |> 
+  mutate(completed_wave2 = ifelse(progress==100,1,0),
+completed_stereotypes_wave2 = ifelse(progress>=53,1,0))
 
 
 
-waves_combined <- wave1 |> dplyr::select(i_user3,pid:psm_aps) |> 
-  left_join(wave2 |> dplyr::select(i_user3,pid_w2:public_service_work_information), by = "i_user3")
+waves_combined <- wave1 |> dplyr::select(i_user3,pid,gender:psm_aps) |> 
+  left_join(wave2 |> dplyr::select(i_user3,pid_w2:completed_stereotypes_wave2), by = "i_user3") |> 
+  mutate(return_wave2 = ifelse(is.na(pid_w2),0,1),
+completed_wave2 = ifelse(completed_wave2==1,1,0) |> replace_na(0),
+completed_stereotypes_wave2 = ifelse(completed_stereotypes_wave2==1,1,0) |> replace_na(0)
+) 
 
 
 save.image()
