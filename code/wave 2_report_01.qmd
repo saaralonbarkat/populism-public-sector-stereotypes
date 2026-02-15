@@ -100,7 +100,7 @@ waves_combined_labs <- waves_combined %>% remove_labels() %>%
 waves_combined_labs %>%
   dplyr::select(gender_label, age_group_label, religiosity_label,education_label, income_label, 
          sector_employment_label, public_sector_employee_current, 
-         public_sector_experience, right_left_ideology,coalition_party_vote_intention,return_wave2,completed_wave2,completed_stereotypes_wave2,duration_in_minutes,duration_in_minutes_w2
+         public_sector_experience, right_left_ideology,coalition_party_vote_intention,return_wave2,completed_wave2,completed_stereotypes_wave2,duration_in_minutes,duration_in_minutes_w2,public_service_work_information
          ) %>%
   tbl_summary(
     label = list(
@@ -129,7 +129,7 @@ Returning to wave 2
 waves_combined_labs %>%
   dplyr::select(gender_label, age_group_label, religiosity_label,education_label, income_label, 
          sector_employment_label, public_sector_employee_current, 
-         public_sector_experience, right_left_ideology,coalition_party_vote_intention,return_wave2,completed_wave2,duration_in_minutes_w2
+         public_sector_experience, right_left_ideology,coalition_party_vote_intention,return_wave2,completed_wave2,duration_in_minutes_w2,public_service_work_information
          ) %>%
   tbl_summary(by=return_wave2,
     label = list(
@@ -178,13 +178,40 @@ waves_combined_labs %>%
 ```
 
 
+Returning to wave 2 and completed stereotypes (including no valence coding)
+```{r}
+# בחירת משתנים דמוגרפיים
+waves_combined_labs %>%
+  dplyr::select(gender_label, age_group_label, religiosity_label,education_label, income_label, 
+         sector_employment_label, public_sector_employee_current, 
+         public_sector_experience, right_left_ideology,coalition_party_vote_intention,return_wave2,completed_wave2,completed_stereotypes_wave2,duration_in_minutes_w2
+         ) %>%
+  tbl_summary(by=completed_stereotypes_wave2,
+    label = list(
+      age_group_label ~ "Age Group",
+      religiosity_label ~ "Religiosity",
+      education_label ~ "Education",
+      income_label ~ "Income (relative to average)",
+      sector_employment_label ~ "Employment Sector",
+      public_sector_employee_current ~ "Currently employed in public sector",
+      public_sector_experience ~ "Any public sector experience",
+      right_left_ideology ~ "Right-Left Ideology (1=extreme right, 7=extreme left)"
+    ),
+    missing_text = "Missing"
+  ) %>%
+  modify_caption("**Table 1. Sample Demographics**") %>%
+  bold_labels()
+
+```
+
+
 Completed wave 2
 ```{r}
 # בחירת משתנים דמוגרפיים
 waves_combined_labs %>%
   dplyr::select(gender_label, age_group_label, religiosity_label,education_label, income_label, 
          sector_employment_label, public_sector_employee_current, 
-         public_sector_experience, right_left_ideology,coalition_party_vote_intention,return_wave2,completed_wave2,completed_stereotypes_wave2,duration_in_minutes,duration_in_minutes_w2
+         public_sector_experience, right_left_ideology,coalition_party_vote_intention,return_wave2,completed_wave2,completed_stereotypes_wave2,duration_in_minutes,duration_in_minutes_w2,public_service_work_information
          ) %>%
   tbl_summary(by=completed_wave2,
     label = list(
@@ -257,7 +284,7 @@ waves_combined_labs %>%
 
 ```{r}
 waves_combined_labs %>%
-  dplyr::select(friendly_scale:general_image_social,civil_servant_elite_wave2
+  dplyr::select(friendly_scale:general_image_social,civil_servant_elite_wave2,trust_civil_service_wave2,trust_civil_service
          ) %>%
  sjPlot::tab_corr(
     triangle = "lower",
@@ -314,13 +341,35 @@ fit.cfa.model.4factor_ster <- cfa(
 summary(fit.cfa.model.4factor_ster, fit.measures = TRUE, standardize = TRUE)
 ```
 
+### 4 factor with 2 second order factors
 
+```{r}
+
+cfa.model.4_2factor_ster <- '
+  Sociability =~ friendly_scale+sociable_scale 
+  Morality =~ trustworthy_scale+fair_scale
+  Ability =~ competent_scale+skilled_scale
+  Assertiveness =~ assertive_scale+goal_oriented_scale
+  
+  
+  Warmth =~ Sociability+Morality
+  Competence =~ Ability + Assertiveness'
+  
+fit.cfa.model.4_2factor_ster <- cfa(
+  cfa.model.4_2factor_ster, # model formula,
+  data = wave2,
+  se = "robust",
+  std.lv = T
+)
+
+summary(fit.cfa.model.4_2factor_ster, fit.measures = TRUE, standardize = TRUE)
+```
 
 # Politicization items
 
 ```{r}
-waves_combined_labs %>%  
-  dplyr::select(politicization_1:politicization_6,trust_civil_service_wave2
+wave2 %>%  labelled::to_factor() |> 
+  dplyr::select(q41_1:q41_6,trust_civil_service_wave2,civil_servant_label
          ) %>%
   tbl_summary(missing_text = "Missing"
   ) %>%
@@ -328,6 +377,16 @@ waves_combined_labs %>%
   bold_labels()
 ```
 
+```{r}
+waves_combined_labs %>%  labelled::to_factor() |> 
+  dplyr::select(politicization_1:politicization_6,trust_civil_service_wave2,coalition_party_vote_intention
+         ) %>%
+  tbl_summary(by="coalition_party_vote_intention",
+  missing_text = "Missing"
+  ) %>%
+  modify_caption("**Table 1. Sample Demographics**") %>%
+  bold_labels()
+```
 ```{r}
 waves_combined_labs %>%
   dplyr::select(politicization_1:politicization_6,trust_civil_service_wave2
@@ -349,3 +408,53 @@ wave2 |> labelled::remove_labels() |>
 
 ```
 
+
+# Direction of spontanious stereotypes
+
+
+```{r}
+responses_direction_wave2 %>% labelled::remove_labels() %>%
+  dplyr::select(response_direction,civil_servant_label) %>%
+  tbl_summary(by=civil_servant_label)
+```
+
+```{r}
+responses_direction_wave2 |> 
+  ggplot(aes(x = response_direction)) +
+  geom_bar() +
+  facet_grid(cols=vars(civil_servant_label))+
+  labs(title = "Distribution of Response Direction",
+       x = "Response Direction (1=Negative, 2=Neutral, 3=Positive)",
+       y = "Frequency")+
+  theme_minimal()
+```
+
+
+# Public sector work information
+
+
+Returning to wave 2 and completed stereotypes
+```{r}
+# בחירת משתנים דמוגרפיים
+waves_combined_labs %>%
+  dplyr::select(gender_label, age_group_label, religiosity_label,education_label, income_label, 
+         sector_employment_label, public_sector_employee_current, 
+         public_sector_experience, right_left_ideology,coalition_party_vote_intention,return_wave2,completed_wave2,completed_stereotypes_wave2,duration_in_minutes_w2,public_service_work_information
+         ) %>%
+  tbl_summary(by=public_service_work_information,
+    label = list(
+      age_group_label ~ "Age Group",
+      religiosity_label ~ "Religiosity",
+      education_label ~ "Education",
+      income_label ~ "Income (relative to average)",
+      sector_employment_label ~ "Employment Sector",
+      public_sector_employee_current ~ "Currently employed in public sector",
+      public_sector_experience ~ "Any public sector experience",
+      right_left_ideology ~ "Right-Left Ideology (1=extreme right, 7=extreme left)"
+    ),
+    missing_text = "Missing"
+  ) %>%
+  modify_caption("**Table 1. Sample Demographics**") %>%
+  bold_labels()
+
+```

@@ -74,19 +74,149 @@ public_private_sector_performance = q38
   politicization_5 = q41_5,
   politicization_6 = q41_6
 ) |> 
-  mutate(public_service_work_information = ifelse(q33==1,1,0)) |> 
+  mutate(public_service_work_information = case_when(
+    q33==1 ~1,
+    q33==2 ~0,
+    progress==100 ~0,
+  )) |> 
   mutate(completed_wave2 = ifelse(progress==100,1,0),
 completed_stereotypes_wave2 = ifelse(progress>=53,1,0))
 
 
 
 waves_combined <- wave1 |> dplyr::select(i_user3,pid,gender:psm_aps) |> 
-  left_join(wave2 |> dplyr::select(i_user3,pid_w2:completed_stereotypes_wave2), by = "i_user3") |> 
+  left_join(wave2 |> dplyr::select(i_user3,pid_w2:completed_stereotypes_wave2,progress), by = "i_user3") |> 
   mutate(return_wave2 = ifelse(is.na(pid_w2),0,1),
 completed_wave2 = ifelse(completed_wave2==1,1,0) |> replace_na(0),
 completed_stereotypes_wave2 = ifelse(completed_stereotypes_wave2==1,1,0) |> replace_na(0)
 ) 
 
 
+
+
+# responses dataset
+
+## responses dataset public service employees (1) # עובדים בשירות הציבורי
+responses_public_service_employees <- wave2 %>% 
+  dplyr::select(response_id,
+                pid_w2,
+                a1_q119_1_text:a1_qid31,civil_servant_label) %>% 
+  pivot_longer(cols = a1_q119_1_text:a1_q119_6_text,
+               values_to = "response") %>% 
+  mutate(response_order = name %>% 
+           recode(
+             `a1_q119_1_text` = 1,
+             `a1_q119_2_text` = 2,
+             `a1_q119_3_text` = 3,
+             `a1_q119_4_text` = 4,
+             `a1_q119_5_text` = 5,
+             `a1_q119_6_text` = 6
+           ),
+         imagined_entity = a1_qid31) %>% 
+  mutate(participant_response_id = str_c(pid_w2,"_",response_order)) %>% 
+  select(response_id,
+         pid_w2,
+         civil_servant_label,
+         response_order,
+         participant_response_id,
+         response,
+         imagined_entity) %>% 
+  filter(response!="")
+
+
+## responses dataset  public service bureaucrats (2) # בירוקרטים בשירות הציבורי
+responses_public_service_bureaucrats <- wave2 %>% 
+  dplyr::select(response_id,
+                pid_w2,
+                a2_q119_1_text:a2_qid31,civil_servant_label) %>% 
+  pivot_longer(cols = a2_q119_1_text:a2_q119_6_text,
+               values_to = "response") %>% 
+  mutate(response_order = name %>% 
+           recode(
+             `a2_q119_1_text` = 1,
+             `a2_q119_2_text` = 2,
+             `a2_q119_3_text` = 3,
+             `a2_q119_4_text` = 4,
+             `a2_q119_5_text` = 5,
+             `a2_q119_6_text` = 6
+           ),
+         imagined_entity = a2_qid31) %>% 
+  mutate(participant_response_id = str_c(pid_w2,"_",response_order)) %>% 
+  select(response_id,
+         pid_w2,
+         civil_servant_label,
+         response_order,
+         participant_response_id,
+         response,
+         imagined_entity) %>% 
+  filter(response!="")
+
+
+
+## responses dataset clercks (3) # פקידים בשירות הציבורי
+responses_public_service_clerks <- wave2 %>% 
+  dplyr::select(response_id,
+                pid_w2,
+                a3_q119_1_text:a3_qid31,civil_servant_label) %>% 
+  pivot_longer(cols = a3_q119_1_text:a3_q119_6_text,
+               values_to = "response") %>% 
+  mutate(response_order = name %>% 
+           recode(
+             `a3_q119_1_text` = 1,
+             `a3_q119_2_text` = 2,
+             `a3_q119_3_text` = 3,
+             `a3_q119_4_text` = 4,
+             `a3_q119_5_text` = 5,
+             `a3_q119_6_text` = 6
+           ),
+         imagined_entity = a3_qid31) %>% 
+  mutate(participant_response_id = str_c(pid_w2,"_",response_order)) %>% 
+  select(response_id,
+         pid_w2,
+         civil_servant_label,
+         response_order,
+         participant_response_id,
+         response,
+         imagined_entity) %>% 
+  filter(response!="")
+
+
+responses_direction <- wave2 %>% 
+  dplyr::select(response_id,
+                pid_w2,
+                q123_1:q123_6,civil_servant_label) %>% 
+  pivot_longer(cols = q123_1:q123_6,
+               values_to = "response_direction") %>% 
+  mutate(response_order = name %>% 
+           recode(
+             `q123_1` = 1,
+             `q123_2` = 2,
+             `q123_3` = 3,
+             `q123_4` = 4,
+             `q123_5` = 5,
+             `q123_6` = 6
+           )) %>% 
+  mutate(participant_response_id = str_c(pid_w2,"_",response_order)) %>% 
+  select(response_id,
+         pid_w2,
+         civil_servant_label,
+         response_order,
+         participant_response_id,
+         response_direction) %>%
+  drop_na(response_direction)
+
+
+responses_direction_wave2 <- bind_rows(responses_public_service_employees,
+                                                responses_public_service_bureaucrats,
+                                                responses_public_service_clerks,
+                                                ) %>% 
+  left_join(responses_direction)
+
+
+
+
+
+
 save.image()
 
+waves_combined |> filter(civil_servant_label %in% NA) |> dplyr::select(pid, i_user3) |> write_csv("no_return_user_id_15.02.2026.csv")
