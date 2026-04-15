@@ -219,4 +219,7 @@ responses_direction_wave2 <- bind_rows(responses_public_service_employees,
 
 save.image()
 
-waves_combined |> filter(civil_servant_label %in% NA) |> dplyr::select(pid, i_user3) |> write_csv("no_return_user_id_15.02.2026.csv")
+#waves_combined |> filter(civil_servant_label %in% NA) |> dplyr::select(pid, i_user3) |> write_csv("no_return_user_id_15.02.2026.csv")
+t1 <- waves_combined |> filter(pid_w2 %in% NA) |> dplyr::select(pid, i_user3) |> write_csv("no_return_user_id_23.02.2026.csv")
+t1 <- waves_combined |> filter(progress < 95) |> dplyr::select(pid, i_user3,progress) |> write_csv("partial_completion_user_id_23.02.2026.csv")
+t1 <- waves_combined |> filter(progress == 95) |> dplyr::select(pid, i_user3,progress) |> write_csv("users_95percent_23.02.2026.csv")

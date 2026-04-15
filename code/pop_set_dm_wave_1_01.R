@@ -190,3 +190,5 @@ mutate(
 )
 
 save.image()
+
+wave1 |> dplyr::select(pid, end_date, i_user3) |> write_csv("data/wave1_pid_end_date_userid.csv")
