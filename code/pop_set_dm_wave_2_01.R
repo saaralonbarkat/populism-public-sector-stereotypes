@@ -99,6 +99,7 @@ completed_stereotypes_wave2 = ifelse(completed_stereotypes_wave2==1,1,0) |> repl
 ## responses dataset public service employees (1) # עובדים בשירות הציבורי
 responses_public_service_employees <- wave2 %>% 
   dplyr::select(response_id,
+                i_user3,
                 pid_w2,
                 a1_q119_1_text:a1_qid31,civil_servant_label) %>% 
   pivot_longer(cols = a1_q119_1_text:a1_q119_6_text,
@@ -115,6 +116,7 @@ responses_public_service_employees <- wave2 %>%
          imagined_entity = a1_qid31) %>% 
   mutate(participant_response_id = str_c(pid_w2,"_",response_order)) %>% 
   select(response_id,
+                i_user3,
          pid_w2,
          civil_servant_label,
          response_order,
@@ -127,6 +129,7 @@ responses_public_service_employees <- wave2 %>%
 ## responses dataset  public service bureaucrats (2) # בירוקרטים בשירות הציבורי
 responses_public_service_bureaucrats <- wave2 %>% 
   dplyr::select(response_id,
+                i_user3,
                 pid_w2,
                 a2_q119_1_text:a2_qid31,civil_servant_label) %>% 
   pivot_longer(cols = a2_q119_1_text:a2_q119_6_text,
@@ -143,6 +146,7 @@ responses_public_service_bureaucrats <- wave2 %>%
          imagined_entity = a2_qid31) %>% 
   mutate(participant_response_id = str_c(pid_w2,"_",response_order)) %>% 
   select(response_id,
+                i_user3,
          pid_w2,
          civil_servant_label,
          response_order,
@@ -156,6 +160,7 @@ responses_public_service_bureaucrats <- wave2 %>%
 ## responses dataset clercks (3) # פקידים בשירות הציבורי
 responses_public_service_clerks <- wave2 %>% 
   dplyr::select(response_id,
+                i_user3,
                 pid_w2,
                 a3_q119_1_text:a3_qid31,civil_servant_label) %>% 
   pivot_longer(cols = a3_q119_1_text:a3_q119_6_text,
@@ -172,6 +177,7 @@ responses_public_service_clerks <- wave2 %>%
          imagined_entity = a3_qid31) %>% 
   mutate(participant_response_id = str_c(pid_w2,"_",response_order)) %>% 
   select(response_id,
+                i_user3,
          pid_w2,
          civil_servant_label,
          response_order,
@@ -183,6 +189,7 @@ responses_public_service_clerks <- wave2 %>%
 
 responses_direction <- wave2 %>% 
   dplyr::select(response_id,
+                i_user3,
                 pid_w2,
                 q123_1:q123_6,civil_servant_label) %>% 
   pivot_longer(cols = q123_1:q123_6,
@@ -198,6 +205,7 @@ responses_direction <- wave2 %>%
            )) %>% 
   mutate(participant_response_id = str_c(pid_w2,"_",response_order)) %>% 
   select(response_id,
+                i_user3,
          pid_w2,
          civil_servant_label,
          response_order,
@@ -210,16 +218,107 @@ responses_direction_wave2 <- bind_rows(responses_public_service_employees,
                                                 responses_public_service_bureaucrats,
                                                 responses_public_service_clerks,
                                                 ) %>% 
-  left_join(responses_direction)
-
-
-
+  left_join(responses_direction)  |>
+  left_join(wave2 |> dplyr::select(i_user3,friendly_scale:general_image_social,civil_servant_elite_wave2,trust_civil_service_wave2), by = "i_user3") |> 
+  dplyr::left_join(wave1 |> dplyr::select(i_user3,pid,gender:psm_aps), by = "i_user3")
 
 
 
 save.image()
 
 #waves_combined |> filter(civil_servant_label %in% NA) |> dplyr::select(pid, i_user3) |> write_csv("no_return_user_id_15.02.2026.csv")
-t1 <- waves_combined |> filter(pid_w2 %in% NA) |> dplyr::select(pid, i_user3) |> write_csv("no_return_user_id_23.02.2026.csv")
-t1 <- waves_combined |> filter(progress < 95) |> dplyr::select(pid, i_user3,progress) |> write_csv("partial_completion_user_id_23.02.2026.csv")
-t1 <- waves_combined |> filter(progress == 95) |> dplyr::select(pid, i_user3,progress) |> write_csv("users_95percent_23.02.2026.csv")
+#t1 <- waves_combined |> filter(pid_w2 %in% NA) |> dplyr::select(pid, i_user3) |> write_csv("no_return_user_id_23.02.2026.csv")
+#t1 <- waves_combined |> filter(progress < 95) |> dplyr::select(pid, i_user3,progress) |> write_csv("partial_completion_user_id_23.02.2026.csv")
+#t1 <- waves_combined |> filter(progress == 95) |> dplyr::select(pid, i_user3,progress) |> write_csv("users_95percent_23.02.2026.csv")
+
+
+responses_to_send <- responses_direction_wave2 |>
+  dplyr::select(
+    response_id,
+    pid_w2,
+    participant_response_id,
+    civil_servant_label,
+    response_order,
+    response,
+    imagined_entity,
+    response_direction
+  ) |>
+  dplyr::filter(!is.na(response), response != "") |> 
+  distinct(participant_response_id, .keep_all = TRUE)
+
+#readr::write_csv(responses_to_send, "responses_to_code.csv")
+
+
+analytic_respondents <- waves_combined %>%
+  filter(return_wave2 == 1) %>%
+  filter(completed_stereotypes_wave2 == 1) %>%
+  filter(duration_in_minutes    >= 3) %>%
+  filter(duration_in_minutes_w2 >= 1)
+
+# Pattern-based screen for low-information responses (blank, placeholder,
+# pure-digit, "don't know" / "nothing" variants).
+invalid_patterns <- c(
+  "^\\s*$",                              # empty / whitespace
+  "^(-+|\\.+|\\?+|/+)$",                 # placeholders
+  "^\\d+$",                              # pure-digit answers (e.g. "1", "2", "3", "42")
+  "^(lo yode[aa]|lo yod[ea]'a|lo yodea|dk|don'?t know|nothing|none)$"
+)
+invalid_regex <- paste(invalid_patterns, collapse = "|")
+
+responses <- responses_direction_wave2 %>%
+  semi_join(analytic_respondents, by = "pid") %>%
+  filter(!is.na(response_direction)) %>%
+  mutate(
+    response_clean = str_squish(response),
+    auto_invalid   = str_detect(tolower(response_clean), invalid_regex)
+  )
+
+# If the manually-coded `response_valid` flag has already been merged in,
+# coalesce it with the automatic screen. Otherwise, use the automatic screen
+# on its own.
+if ("response_valid" %in% names(responses)) {
+  responses <- responses %>%
+    mutate(response_valid = dplyr::coalesce(response_valid, !auto_invalid))
+} else {
+  responses <- responses %>%
+    mutate(response_valid = !auto_invalid)
+}
+
+responses <- responses %>%
+  filter(response_valid) %>%
+  mutate(
+    pro_netanyahu_coalition = factor(
+      pro_netanyahu_coalition,
+      levels = c("Anti-Netanyahu/Other", "Netanyahu coalition")
+    ),
+    civil_servant_label = factor(
+      civil_servant_label,
+      levels = c("public service employee",
+                 "public service bureaucrat",
+                 "public service clerk")
+    ),
+    valence     = as.numeric(response_direction),
+    valence_ord = factor(response_direction, ordered = TRUE),
+    valence_neg = as.integer(response_direction <= 2)
+  )
+
+# Pull in the coded responses (warmth / competence sub-categories etc.).
+coded <- readr::read_csv("coded_responses.csv", show_col_types = FALSE) |>
+  dplyr::select(
+    response_id, participant_response_id, response_key,
+    assertiveness, ability, sociability, morality,
+    status, beliefs, other, erase,
+    warmth, competence, source
+  )
+
+responses <- responses |>
+  dplyr::mutate(
+    response_key = stringr::str_to_lower(stringr::str_squish(response))
+  ) |>
+  dplyr::left_join(coded,
+                   by = c("response_id", "participant_response_id", "response_key")) |> 
+  distinct(participant_response_id, .keep_all = TRUE)
+
+
+
+

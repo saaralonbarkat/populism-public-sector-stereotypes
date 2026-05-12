@@ -1,0 +1,2006 @@
+---
+title: "Populism and Stereotypes of Civil Servants — Wave 1 Report"
+subtitle: "Descriptive analyses, scale validation, and bivariate / multivariate associations"
+author: "Saar Alon-Barkat"
+date: "January 2025"
+format:
+  html:
+    self-contained: true
+    code-fold: true
+    toc: true
+    toc-location: left
+    toc-depth: 4
+execute:
+  message: false
+  warning: false
+---
+
+> **About this report.** Wave-1 descriptive and exploratory analyses for the *Populism and Stereotypes* study. Wave 1 measured populist attitudes, partisanship, trust in institutions, conspiracy beliefs, perceptions of civil servants as an elite group, and attraction to public-sector work. The report is organised around: (1) sample characteristics, (2) the populist-attitudes battery (item-level distributions, reliability, CFA, indices), (3) populist attitudes by partisanship and other covariates, (4) institutional trust, (5) conspiracy beliefs, (6) perception of civil servants as an elite group, and (7) attraction to public-sector work.
+
+# Setup
+
+Load packages used throughout the report.
+
+```{r}
+library(tidyverse)
+library(gt)
+library(gtsummary)
+library(sjPlot)
+library(haven)
+library(labelled)
+library(codebook)
+library(janitor)
+library(lavaan)
+```
+
+Import the wave-1 dataset (`wave1`) from the project's `.RData` file.
+
+```{r}
+load(".RData")
+```
+
+
+# Sample
+
+This section describes the wave-1 sample. We first construct readable string labels for the demographic variables (gender, age group, education, income, employment sector, religiosity), then summarise the sample as a whole and broken down by gender.
+
+## Build labelled demographic variables
+
+Convert the numeric demographic codes into readable string labels so they can be displayed in summary tables and plots.
+
+```{r}
+# Build readable string labels for demographic variables
+wave1_labs <- wave1 %>% remove_labels() %>%
+  mutate(
+    gender_label = case_when(
+      gender == 1 ~ "Male",
+      gender == 2 ~ "Female",
+      gender == 3 ~ "Other",
+      TRUE ~ NA_character_
+    ),
+    age_group_label = case_when(
+      age_group == 1 ~ "18-24",
+      age_group == 2 ~ "25-34",
+      age_group == 3 ~ "35-44",
+      age_group == 4 ~ "45-54",
+      age_group == 5 ~ "55-64",
+      age_group == 6 ~ "65+",
+      TRUE ~ NA_character_
+    ),
+    education_label = case_when(
+      education == 1 ~ "1.Elementary or less",
+      education == 2 ~ "2.No high school diploma",
+      education == 3 ~ "3.High school diploma",
+      education == 4 ~ "4.Post high school",
+      education == 5 ~ "5.College education (no degree)",
+      education == 6 ~ "6.Bachelor's degree",
+      education == 7 ~ "7.Master's degree",
+      education == 8 ~ "8.Doctorate degree",
+      TRUE ~ NA_character_
+    ),
+    income_label = case_when(
+      income == 1 ~ "1.Much below average",
+      income == 2 ~ "2.Below average",
+      income == 3 ~ "3.Average",
+      income == 4 ~ "4.Above average",
+      income == 5 ~ "5.Much above average",
+      TRUE ~ NA_character_
+    ),
+    sector_employment_label = case_when(
+      sector_employment == 1 ~ "Public sector",
+      sector_employment == 2 ~ "Private sector",
+      sector_employment == 3 ~ "Third sector",
+      sector_employment == 4 ~ "Self-employed",
+      sector_employment == 5 ~ "Not employed",
+      sector_employment == 6 ~ "Other",
+      TRUE ~ NA_character_
+    ),
+    # NOTE: religiosity == 2 and religiosity == 3 are both currently mapped to
+    # "4.Religious", which collapses two distinct codebook categories into one.
+    # Verify whether category 2 should be "Religious-Charedi" / "National
+    # religious" (or similar) and update before publication.
+    religiosity_label = case_when(
+      religiosity == 1 ~ "5.Ultra Orthodox (Charedi)",
+      religiosity == 2 ~ "4.Religious",
+      religiosity == 3 ~ "4.Religious",
+      religiosity == 4 ~ "3.Traditional religious",
+      religiosity == 5 ~ "2.Traditional not religious",
+      religiosity == 6 ~ "1.Secular",
+      TRUE ~ NA_character_
+    )
+  )
+
+```
+
+## Sample demographics — overall
+
+Overall distribution of demographic and political variables in the wave-1 sample.
+
+```{r}
+# Overall demographic summary
+wave1_labs %>%
+  dplyr::select(gender_label, age_group_label, religiosity_label,education_label, income_label,
+         sector_employment_label, public_sector_employee_current,
+         public_sector_experience, right_left_ideology,coalition_party_vote_intention,
+         ) %>%
+  tbl_summary(
+    label = list(
+      gender_label ~ "Gender",
+      age_group_label ~ "Age Group",
+      religiosity_label ~ "Religiosity",
+      education_label ~ "Education",
+      income_label ~ "Income (relative to average)",
+      sector_employment_label ~ "Employment Sector",
+      public_sector_employee_current ~ "Currently employed in public sector",
+      public_sector_experience ~ "Any public sector experience",
+      right_left_ideology ~ "Right-Left Ideology (1=extreme right, 7=extreme left)"
+    ),
+    missing_text = "Missing"
+  ) %>%
+  modify_caption("**Table 1. Sample demographics — overall**") %>%
+  bold_labels()
+
+```
+
+## Sample demographics — by gender
+
+Same set of variables broken down by gender, to surface any compositional differences.
+
+```{r}
+# Demographic summary by gender
+wave1_labs %>%
+  dplyr::select(gender_label, age_group_label, religiosity_label,education_label, income_label,
+         sector_employment_label, public_sector_employee_current,
+         public_sector_experience, right_left_ideology,coalition_party_vote_intention,
+         ) %>%
+  tbl_summary(by=gender_label,
+    label = list(
+      age_group_label ~ "Age Group",
+      religiosity_label ~ "Religiosity",
+      education_label ~ "Education",
+      income_label ~ "Income (relative to average)",
+      sector_employment_label ~ "Employment Sector",
+      public_sector_employee_current ~ "Currently employed in public sector",
+      public_sector_experience ~ "Any public sector experience",
+      right_left_ideology ~ "Right-Left Ideology (1=extreme right, 7=extreme left)"
+    ),
+    missing_text = "Missing"
+  ) %>%
+  modify_caption("**Table 2. Sample demographics — by gender**") %>%
+  bold_labels()
+
+```
+
+
+
+# Populist attitudes
+
+The populist-attitudes battery comprises 13 items intended to tap four conceptual dimensions: **popular sovereignty**, **anti-elitism**, **homogeneity** of the people, and **Manichean** worldview. Items were measured on a 5-point Likert scale (Hebrew wording reproduced below).
+
+## Item wording
+
+**Popular sovereignty (pop1–pop3)**
+
+-   **pop1 המילה האחרונה בהחלטות הפוליטיות החשובות ביותר, צריכה להיות של העם (למשל באמצעות משאל עם)**
+-   **pop2 בהכרעות פוליטיות חשובות, חייבים לשאול לדעתו של העם**
+-   **pop3 העם, ולא נבחרי הציבור, צריכים להיות אלה שמקבלים את החלטות המדיניות החשובות ביותר**
+
+**Anti-elitism (pop4–pop7)**
+
+-   **pop4 ההבדלים בין האליטות לעם הם הרבה יותר גדולים מאשר ההבדלים בתוך העם עצמו**
+-   **pop5 המדינה שלנו מנוהלת בפועל על ידי קבוצה קטנה של בעלי אינטרס חזקים הפועלים לטובת עצמם**
+-   **pop6 אליטות שלא נותנות דין וחשבון לאף אחד מונעות מהאזרחים הפשוטים לשפר את חייהם**
+-   **pop7 לא משנה את מי העם בוחר בבחירות, בסוף מי שקובע באמת מה תהיה המדיניות הן האליטות ששולטות במדינה**
+
+**Homogeneity of the people (pop8–pop10)**
+
+-   **pop8 האנשים הפשוטים פועלים יחד ובשיתוף פעולה**
+-   **pop9 אנשים פשוטים הם טובים וישרים**
+-   **pop10 האנשים הרגילים חולקים את אותם ערכים ואינטרסים**
+
+**Manichean worldview (pop11–pop13)**
+
+-   **pop11 בסופו של דבר, פוליטיקה היא מאבק בין העם לבעלי הכוח**
+-   **pop12 פוליטיקה היא למעשה מאבק בין טוב לרע**
+-   **pop13 מה שאנשים מכנים 'פשרה' בפוליטיקה הוא למעשה ויתור על עקרונות**
+
+## Item-level distributions by partisanship
+
+Bar plots show the response distribution of each item, broken down by whether the respondent supports the pro-Netanyahu coalition. We expect anti-elitism items to be substantially more endorsed in the anti-Netanyahu camp during the period when Netanyahu was in office.
+
+### Popular sovereignty items (pop1–pop3)
+
+```{r}
+# Bar plot for each popular-sovereignty item, by pro-Netanyahu coalition support
+wave1 %>%
+  pivot_longer(cols = pop1:pop3, names_to = "item", values_to = "response") %>%
+  ggplot(aes(x = response, fill = pro_netanyahu_coalition %>% labelled::to_factor())) +
+  geom_bar(position = "dodge") +
+  facet_wrap(~ item, scales = "free_y") +
+  labs(
+    x = "Response",
+    y = "Count",
+    fill = "Pro-Netanyahu coalition",
+    title = "Popular sovereignty items (pop1–pop3) by partisanship"
+  ) +
+  theme_minimal()
+```
+
+### Anti-elitism items (pop4–pop7)
+
+```{r}
+# Bar plot for each anti-elitism item, by pro-Netanyahu coalition support
+wave1 %>%
+  pivot_longer(cols = pop4:pop7, names_to = "item", values_to = "response") %>%
+  ggplot(aes(x = response, fill = pro_netanyahu_coalition %>% labelled::to_factor())) +
+  geom_bar(position = "dodge") +
+  facet_wrap(~ item, scales = "free_y") +
+  labs(
+    x = "Response",
+    y = "Count",
+    fill = "Pro-Netanyahu coalition",
+    title = "Anti-elitism items (pop4–pop7) by partisanship"
+  ) +
+  theme_minimal()
+```
+
+
+### Homogeneity items (pop8–pop10)
+
+```{r}
+# Bar plot for each homogeneity item, by pro-Netanyahu coalition support
+wave1 %>%
+  pivot_longer(cols = pop8:pop10, names_to = "item", values_to = "response") %>%
+  ggplot(aes(x = response, fill = pro_netanyahu_coalition %>% labelled::to_factor())) +
+  geom_bar(position = "dodge") +
+  facet_wrap(~ item, scales = "free_y") +
+  labs(
+    x = "Response",
+    y = "Count",
+    fill = "Pro-Netanyahu coalition",
+    title = "Homogeneity items (pop8–pop10) by partisanship"
+  ) +
+  theme_minimal()
+```
+
+### Manichean items (pop11–pop13)
+
+```{r}
+# Bar plot for each Manichean item, by pro-Netanyahu coalition support
+wave1 %>%
+  pivot_longer(cols = pop11:pop13, names_to = "item", values_to = "response") %>%
+  ggplot(aes(x = response, fill = pro_netanyahu_coalition %>% labelled::to_factor())) +
+  geom_bar(position = "dodge") +
+  facet_wrap(~ item, scales = "free_y") +
+  labs(
+    x = "Response",
+    y = "Count",
+    fill = "Pro-Netanyahu coalition",
+    title = "Manichean items (pop11–pop13) by partisanship"
+  ) +
+  theme_minimal()
+```
+
+## Inter-item correlations
+
+Correlation matrix across all 13 numeric populism items (`pop1_n`–`pop13_n`). Useful for spotting items that fail to cluster with their conceptual dimension.
+
+```{r}
+wave1 %>%
+  dplyr::select(pop1_n:pop13_n) %>%
+  sjPlot::tab_corr()
+```
+
+## Reliability (Cronbach's α)
+
+Item-scale statistics, including Cronbach's α, for the full battery and for each conceptual sub-scale separately.
+
+### Full 13-item battery
+
+```{r}
+wave1 %>%
+  dplyr::select(pop1_n:pop13_n) %>%
+  sjPlot::tab_itemscale()
+```
+
+### Popular sovereignty (pop1–pop3)
+
+```{r}
+wave1 %>%
+  dplyr::select(pop1_n:pop3_n) %>%
+  sjPlot::tab_itemscale()
+```
+
+### Anti-elitism (pop4–pop7)
+
+```{r}
+wave1 %>%
+  dplyr::select(pop4_n:pop7_n) %>%
+  sjPlot::tab_itemscale()
+```
+
+### Homogeneity (pop8–pop10)
+
+```{r}
+wave1 %>%
+  dplyr::select(pop8_n:pop10_n) %>%
+  sjPlot::tab_itemscale()
+```
+
+### Manichean (pop11–pop13)
+
+```{r}
+wave1 %>%
+  dplyr::select(pop11_n:pop13_n) %>%
+  sjPlot::tab_itemscale()
+```
+
+
+## Quick look: populism vs. trust in civil service / government
+
+Two exploratory scatter plots, by partisanship: (a) the 4-dimension populism index against trust in the civil service, and (b) the single anti-elitism item `pop5_n` against trust in government.
+
+```{r}
+wave1 |>
+  ggplot(aes(x=populist_attitudes_index_4dim,y=trust_civil_service,color=pro_netanyahu_coalition)) +
+  geom_jitter()  +
+  geom_smooth(method='lm') +
+  labs(title = "Trust in civil service by populist attitudes index (4-dim)",
+       x = "Populist attitudes index (4-dim)",
+       y = "Trust in civil service",
+       color = "Pro-Netanyahu coalition") +
+  theme_minimal()
+
+
+wave1 |>
+  ggplot(aes(x=pop5_n,y=trust_government,color=pro_netanyahu_coalition)) +
+  geom_jitter()  +
+  geom_smooth(method='lm') +
+  labs(title = "Trust in government by anti-elitism item pop5",
+       x = "pop5 (anti-elitism: country run by small interest group)",
+       y = "Trust in government",
+       color = "Pro-Netanyahu coalition") +
+  theme_minimal()
+
+```
+
+## Confirmatory factor analysis (CFA)
+
+We fit three competing measurement models for the populism battery and compare their fit. The 4-factor model is the theoretical target, and is the basis for the dimension scales used downstream.
+
+### One-factor model
+
+A single latent factor for all 13 items — the most parsimonious specification, used as a baseline.
+
+```{r}
+# NOTE: pop11_n, pop12_n and pop13_n were duplicated in the original formula —
+# removed here. Lavaan ignores repeats but the model output is cleaner this way.
+cfa.model.1factor <- '
+  one_factor =~ pop1_n + pop2_n + pop3_n + pop4_n + pop5_n +
+                pop6_n + pop7_n + pop8_n + pop9_n + pop10_n +
+                pop11_n + pop12_n + pop13_n'
+
+fit.cfa.model.1factor <- cfa(cfa.model.1factor,# model formula
+                             data = wave1,
+                             se = "robust",
+                             std.lv = T)
+
+summary(fit.cfa.model.1factor, fit.measures = TRUE, standardize = TRUE)
+```
+
+### Three-factor model
+
+Drops the Manichean dimension (pop11–pop13) and models popular sovereignty, anti-elitism, and homogeneity only.
+
+```{r}
+cfa.model.3factor <- '
+  Popular_sovereignty =~ pop1_n + pop2_n + pop3_n
+  Anti_elitism =~ pop4_n + pop5_n + pop6_n + pop7_n
+  Homogeneity =~  pop8_n + pop9_n + pop10_n'
+
+fit.cfa.model.3factor <- cfa(cfa.model.3factor,# model formula
+                             data = wave1,
+                             se = "robust",
+                             std.lv = T)
+
+summary(fit.cfa.model.3factor, fit.measures = TRUE, standardize = TRUE)
+```
+
+Standardized factor loadings, three-factor model.
+
+```{r}
+parameterEstimates(fit.cfa.model.3factor, standardized=TRUE) %>% 
+  filter(op == "=~") %>% 
+  mutate(Beta = str_c(std.all %>% round(3)," (",pvalue %>% round(3),")")) %>% 
+    dplyr::select('Latent Factor'=lhs,  
+           'Indicator' = rhs,
+           'Estimate std.' = Beta) %>% 
+  kableExtra::kable(digits = 3) %>% 
+    kableExtra::kable_styling(bootstrap_options = c("condensed"),
+                full_width = F,
+                position = "left")%>%
+  kableExtra::collapse_rows(columns = 1, valign = "top")
+```
+
+```{r}
+fitmeasures(fit.cfa.model.3factor, c('chisq','df','pvalue','cfi','tli', 'rmsea', 'rmsea.ci.upper','rmsea.ci.lower', 'srmr')) %>% 
+  broom::tidy() %>% 
+  pivot_wider(names_from = names,values_from = x) %>% 
+  mutate(chisq_01 = str_c(chisq %>% round(3)," [","df=",df,", p=",pvalue %>% round(3),"]"),
+         rmsea_01 = str_c(rmsea %>% round(3)," CI[", rmsea.ci.lower %>% round(3),",",rmsea.ci.upper %>% round(3),"]"),
+         cfi = cfi %>% round(3),
+         tli = tli %>% round(3),
+         srmr = srmr %>% round(3),
+         n = fit.cfa.model.3factor@SampleStats@nobs) %>%
+  dplyr::select('N' = n,
+          'Chi-sq' = chisq_01,
+         'CFI' = cfi,
+         'TLI' = tli,
+         'RMSEA' = rmsea_01,
+         'SRMR' = srmr) %>% 
+  t() %>% 
+  kableExtra::kable()
+```
+
+
+### Four-factor model (theoretical target)
+
+The full theoretical model: popular sovereignty, anti-elitism, homogeneity, and Manichean as four correlated latent factors. Fit indices below are the basis for evaluating the measurement model.
+
+```{r}
+cfa.model.4factor <- '
+  Popular_sovereignty =~ pop1_n + pop2_n + pop3_n
+  Anti_elitism =~ pop4_n + pop5_n + pop6_n + pop7_n
+  Homogeneity =~  pop8_n + pop9_n + pop10_n
+  Manichean =~ pop11_n + pop12_n + pop13_n'
+
+fit.cfa.model.4factor <- cfa(cfa.model.4factor,# model formula
+                             data = wave1,
+                             se = "robust",
+                             std.lv = T)
+
+summary(fit.cfa.model.4factor, fit.measures = TRUE, standardize = TRUE)
+```
+
+Standardized factor loadings, four-factor model.
+
+```{r}
+parameterEstimates(fit.cfa.model.4factor, standardized=TRUE) %>% 
+  filter(op == "=~") %>% 
+  mutate(Beta = str_c(std.all %>% round(3)," (",pvalue %>% round(3),")")) %>% 
+    dplyr::select('Latent Factor'=lhs,  
+           'Indicator' = rhs,
+           'Estimate std.' = Beta) %>% gt::gt() 
+```
+
+```{r}
+fitmeasures(fit.cfa.model.4factor, c('chisq','df','pvalue','cfi','tli', 'rmsea', 'rmsea.ci.upper','rmsea.ci.lower', 'srmr')) %>% 
+  broom::tidy() %>% 
+  pivot_wider(names_from = names,values_from = x) %>% 
+  mutate(chisq_01 = str_c(chisq %>% round(3)," [","df=",df,", p=",pvalue %>% round(3),"]"),
+         rmsea_01 = str_c(rmsea %>% round(3)," CI[", rmsea.ci.lower %>% round(3),",",rmsea.ci.upper %>% round(3),"]"),
+         cfi = cfi %>% round(3),
+         tli = tli %>% round(3),
+         srmr = srmr %>% round(3),
+         n = fit.cfa.model.4factor@SampleStats@nobs) %>%
+  dplyr::select('N' = n,
+          'Chi-sq' = chisq_01,
+         'CFI' = cfi,
+         'TLI' = tli,
+         'RMSEA' = rmsea_01,
+         'SRMR' = srmr) %>% 
+  t() %>% 
+  kableExtra::kable()
+```
+
+
+## Distribution of dimension scales
+
+Descriptive statistics and histograms for the four dimension scales (`popular_sovereignty`, `anti_elitism`, `homogeneity`, `manichean`) and the composite indices already in the dataset.
+
+```{r}
+wave1 %>%
+  dplyr::select(popular_sovereignty:populist_attitudes_index_4dim) %>%
+  sjmisc::descr() |>
+  gt::gt()
+```
+
+Quick base-R histograms of each scale and of the composite indices.
+
+```{r}
+hist(wave1$popular_sovereignty)
+hist(wave1$anti_elitism)
+hist(wave1$homogeneity)
+hist(wave1$manichean)
+
+hist(wave1$populist_attitudes_index_4dim)
+hist(wave1$populist_attitudes_index_4dim)
+```
+
+Pairwise relationships between the four dimension scales.
+
+```{r}
+wave1 %>%
+  dplyr::select(popular_sovereignty:manichean) %>%
+  GGally::ggpairs()
+```
+
+
+## Composite populism indices
+
+We construct three additional composite indices to complement the additive 4-dim and 3-dim mean indices already in the data:
+
+- `populist_attitudes_index_4dim_multiplication` — multiplicative combination of the four dimensions (one weak dimension drags the index down sharply).
+- `populist_attitudes_index_4dim_minimum` — minimum of the standardised dimension scores, i.e., a "weakest-link" Goertz-style index across all four dimensions.
+- `populist_attitudes_index_3dim_minimum` — same construction across three dimensions (excluding Manichean).
+
+```{r}
+wave1 <- wave1 |>
+  mutate(
+    populist_attitudes_index_4dim_multiplication = (popular_sovereignty*anti_elitism*homogeneity*manichean),
+    populist_attitudes_index_4dim_minimum = pmin(scale(popular_sovereignty),scale(anti_elitism),scale(homogeneity),scale(manichean)) |> scale(),
+    populist_attitudes_index_3dim_minimum = pmin(scale(popular_sovereignty),scale(anti_elitism),scale(homogeneity)) |> scale()
+    )
+```
+
+Range and histogram of the 4-dim minimum index.
+
+```{r}
+min(wave1$populist_attitudes_index_4dim_minimum)
+max(wave1$populist_attitudes_index_4dim_minimum)
+hist(wave1$populist_attitudes_index_4dim_minimum)
+```
+
+
+### Histograms of the three composite indices
+
+The dashed line in the first histogram marks 0.5, a common cut-off for "high populism" on the additive index.
+
+```{r}
+# Additive 4-dim index
+wave1 |>
+  ggplot(aes(x = populist_attitudes_index_4dim)) +
+  geom_histogram(binwidth = 0.1, fill = "blue", color = "black", alpha = 0.7) +
+  geom_vline(xintercept = 0.5, color = "red", linetype = "dashed",size=1) +
+  labs(
+    x = "Populist attitudes index (4 dimensions, additive)",
+    y = "Count",
+    title = "Distribution of populist attitudes index — additive (4 dimensions)"
+  ) +
+  theme_minimal()
+
+
+# Multiplicative 4-dim index
+wave1 |>
+  ggplot(aes(x = populist_attitudes_index_4dim_multiplication)) +
+  geom_histogram(binwidth = 0.1, fill = "blue", color = "black", alpha = 0.7) +
+  labs(
+    x = "Populist attitudes index (4 dimensions, multiplicative)",
+    y = "Count",
+    title = "Distribution of populist attitudes index — multiplicative (4 dimensions)"
+  ) +
+  theme_minimal()
+
+# 4-dim minimum (Goertz-style) index — note: this plots
+# `populist_attitudes_index_4dim_minimum`, NOT the multiplicative version.
+wave1 |>
+  ggplot(aes(x = populist_attitudes_index_4dim_minimum)) +
+  geom_histogram(bins = 10, fill = "blue", color = "black", alpha = 0.7) +
+  labs(
+    x = "Populist attitudes index (4 dimensions, minimum / Goertz)",
+    y = "Count",
+    title = "Distribution of populist attitudes index — minimum (4 dimensions)"
+  ) +
+  theme_minimal()
+
+
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+wave1 %>%
+  ggplot(aes(x = populist_attitudes_index_4dim)) +
+  geom_histogram(
+    aes(y = after_stat(density)),
+    bins = 22, fill = "#2E86AB", color = "white",
+    alpha = 0.75, linewidth = 0.4
+  ) +
+  geom_density(
+    color = "#1F3343", fill = "#1F3343",
+    alpha = 0.10, linewidth = 1.1
+  ) +
+  geom_vline(xintercept = 0.5, linetype = "dashed",
+             color = "grey40", linewidth = 0.7) +
+  scale_x_continuous(breaks = seq(0, 1, 0.25),
+                     limits = c(-0.05, 1.05), expand = c(0, 0)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+  labs(
+    title = "Distribution of populist attitudes index",
+    subtitle = sprintf("Wave 1, Israel (Jan 2026). N = %s. Dashed line marks scale midpoint (0.5).",
+                       scales::comma(sum(!is.na(wave1$populist_attitudes_index_4dim)))),
+    x = "Populist attitudes index (4-dim, additive)",
+    y = "Density"
+  ) +
+  theme_minimal(base_size = 14, base_family = "Open Sans") +
+  theme(
+    panel.background   = element_rect(fill = "white", color = NA),
+    plot.background    = element_rect(fill = "white", color = NA),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor   = element_blank(),
+    panel.grid.major.x = element_line(color = "grey92"),
+    plot.title         = element_text(face = "bold", color = "#1F3343"),
+    plot.subtitle      = element_text(size = 10, color = "grey40")
+  )
+```
+
+### Additive vs. minimum index — joint distribution
+
+How the additive 4-dim index compares with the "weakest-link" minimum index, respondent-by-respondent.
+
+```{r}
+wave1 |>
+  ggplot(aes(x = populist_attitudes_index_4dim ,y= populist_attitudes_index_4dim_minimum)) +
+  geom_point(alpha=0.2)+
+  labs(
+    x = "Populist attitudes index (4-dim, additive)",
+    y = "Populist attitudes index (4-dim, minimum)",
+    title = "Additive vs. minimum populist-attitudes index"
+  ) +
+  theme_minimal()
+```
+
+# Populist attitudes by partisanship and ideology
+
+Mean populist attitudes (with 95% normal CIs) across past vote, voting intention, ideology, and pro-Netanyahu coalition support. The dashed red line, where shown, marks 0.5 on the additive index.
+
+## By past vote
+
+```{r}
+wave1 %>%
+  filter(party_vote_past!=9) %>%
+  mutate(
+    party_vote_past = labelled::to_factor(party_vote_past)
+  ) %>%
+  group_by(party_vote_past) %>%
+  mutate(mean_pop = mean(populist_attitudes_index_4dim, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_past = fct_reorder(party_vote_past, mean_pop)) %>%
+  ggplot(aes(x = party_vote_past, y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist attitudes index (4-dim, additive)",
+    title = "Populist attitudes by past vote"
+  ) +
+  theme_minimal()
+```
+
+## By voting intention — three index variants
+
+The same partisan ordering shows up across all three index variants below (additive, minimum, multiplicative), which is reassuring for the construct.
+
+```{r}
+# Additive 4-dim index
+wave1 %>%
+      filter(!party_vote_intention %in% c(8,9)) %>%
+        drop_na(party_vote_intention) %>%
+          mutate(
+              party_vote_intention = labelled::to_factor(party_vote_intention)
+                ) %>%
+                  group_by(party_vote_intention) %>%
+                    mutate(mean_pop = mean(populist_attitudes_index_4dim, na.rm = TRUE)) %>%
+                      ungroup() %>%
+                        mutate(party_vote_intention = fct_reorder(party_vote_intention, mean_pop)) %>%
+                          ggplot(aes(x = party_vote_intention, y = populist_attitudes_index_4dim)) +
+                            geom_point(alpha=0.2) +
+                              stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+                                    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+                                            geom_hline(yintercept = 0.5, color = "red", linetype = "dashed",size=1) +
+                                            coord_flip() +
+                                              labs(
+                                                  x = NULL,
+                                                      y = "Populist attitudes index (4-dim, additive)",
+                                                          title = "Populist attitudes by voting intention — additive index"
+                                                            ) +
+                                                              theme_minimal()
+
+
+
+# 3-dim minimum index
+wave1 %>%
+    filter(party_vote_intention!=9) %>%
+  drop_na(party_vote_intention) %>%
+  mutate(
+    party_vote_intention = labelled::to_factor(party_vote_intention)
+  ) %>%
+  group_by(party_vote_intention) %>%
+  mutate(mean_pop = mean(populist_attitudes_index_3dim_minimum, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_intention = fct_reorder(party_vote_intention, mean_pop)) %>%
+  ggplot(aes(x = party_vote_intention, y = populist_attitudes_index_3dim_minimum)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist attitudes index (3-dim, minimum)",
+    title = "Populist attitudes by voting intention — 3-dim minimum index"
+  ) +
+  theme_minimal()
+
+# 4-dim multiplicative index
+wave1 %>%
+    filter(party_vote_intention!=9) %>%
+  drop_na(party_vote_intention) %>%
+  mutate(
+    party_vote_intention = labelled::to_factor(party_vote_intention)
+  ) %>%
+  group_by(party_vote_intention) %>%
+  mutate(mean_pop = mean(populist_attitudes_index_4dim_multiplication, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_intention = fct_reorder(party_vote_intention, mean_pop)) %>%
+  ggplot(aes(x = party_vote_intention, y = populist_attitudes_index_4dim_multiplication)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist attitudes index (4-dim, multiplicative)",
+    title = "Populist attitudes by voting intention — multiplicative index"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+library(ggridges)
+library(dplyr)
+library(forcats)
+
+wave1 %>%
+  mutate(party = labelled::to_factor(party_vote_intention)) %>%   # התאם את שם המשתנה
+  filter(!is.na(party), !is.na(populist_attitudes_index_4dim)) %>%
+  add_count(party, name = "n_group") %>%
+  filter(n_group >= 30) %>%                                       # סינון מפלגות זעירות
+  mutate(
+    party_label = paste0(party, " (n = ", n_group, ")"),
+    party_label = fct_reorder(party_label,                        # סדר לפי ממוצע פופוליזם
+                              populist_attitudes_index_4dim, 
+                              .fun = mean)
+  ) %>%
+  ggplot(aes(x = populist_attitudes_index_4dim,
+             y = party_label,
+             fill = party_label)) +
+  geom_density_ridges(
+    stat = "density",
+    aes(height = after_stat(density * n)),
+    alpha = 0.80, color = "white", scale = 1.1
+  ) +
+  geom_vline(xintercept = 0.5, linetype = "dashed", color = "grey40") +
+  scale_x_continuous(breaks = seq(0, 1, 0.25),
+                     limits = c(-0.05, 1.05), expand = c(0, 0)) +
+  scale_fill_viridis_d(option = "mako", direction = -1, guide = "none") +
+  labs(
+    title = "Populist attitudes by party vote intention",
+    subtitle = "Wave 1, Israel (Jan 2026). Parties ordered by mean populism score. Parties with n < 30 excluded.",
+    x = "Populist attitudes index (4-dim, additive)",
+    y = NULL
+  ) +
+  theme_minimal(base_size = 14, base_family = "Open Sans") +
+  theme(
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background  = element_rect(fill = "white", color = NA),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor   = element_blank(),
+    plot.title    = element_text(face = "bold", color = "#1F3343"),
+    plot.subtitle = element_text(size = 10, color = "grey40")
+  )
+```
+
+```{r}
+library(forcats)
+
+wave1 %>%
+  filter(!party_vote_intention %in% c(8, 9, 15, 18)) %>%   # מוציא רע"מ, חד"ש (n=2), מתלבטים, ולא-מצביעים
+  drop_na(party_vote_intention) %>%
+  mutate(party = labelled::to_factor(party_vote_intention)) %>%
+  add_count(party, name = "n_group") %>%
+  filter(n_group >= 30) %>%                                # מוציא גם את "המילואימניקים" (n=22)
+  mutate(
+    party = fct_recode(party,
+      "Likud"                  = "הליכוד",
+      "Yesh Atid"              = "יש עתיד",
+      "Religious Zionism"      = "הציונות הדתית",
+      "National Unity"         = "המחנה הממלכתי",
+      "Shas"                   = "ש\"ס",
+      "UTJ"                    = "יהדות התורה",
+      "Yisrael Beiteinu"       = "ישראל ביתנו",
+      "The Democrats"          = "הדמוקרטים (עבודה מרץ)",
+      "Bennett's Party"        = "מפלגת בנט",
+      "Otzma Yehudit"          = "עוצמה יהודית",
+      "Eisenkot's Party"       = "ישר! גדי אייזנקוט"
+    ),
+    party_label = paste0(party, " (n = ", n_group, ")"),
+    party_label = fct_reorder(party_label,
+                              populist_attitudes_index_4dim,
+                              .fun = mean)
+  ) %>%
+  ggplot(aes(x = populist_attitudes_index_4dim,
+             y = party_label,
+             fill = party_label)) +
+  geom_density_ridges(
+    stat = "density",
+    aes(height = after_stat(density * n)),
+    alpha = 0.80, color = "white", scale = 1.1
+  ) +
+  geom_vline(xintercept = 0.5, linetype = "dashed", color = "grey40") +
+  scale_x_continuous(breaks = seq(0, 1, 0.25),
+                     limits = c(-0.05, 1.05), expand = c(0, 0)) +
+  scale_fill_viridis_d(option = "mako", direction = -1, guide = "none") +
+  labs(
+    title    = "Populist attitudes by party vote intention",
+    subtitle = "Wave 1, Israel (Jan 2026). Parties ordered by mean populism. Parties with n < 30 excluded.",
+    x = "Populist attitudes index (4-dim, additive)",
+    y = NULL
+  ) +
+  theme_minimal(base_size = 14, base_family = "Open Sans") +
+  theme(
+    panel.background   = element_rect(fill = "white", color = NA),
+    plot.background    = element_rect(fill = "white", color = NA),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor   = element_blank(),
+    plot.title    = element_text(face = "bold", color = "#1F3343"),
+    plot.subtitle = element_text(size = 10, color = "grey40")
+  )
+```
+
+
+
+```{r}
+library(ggridges)
+library(forcats)
+library(dplyr)
+
+wave1 %>%
+  filter(!party_vote_intention %in% c(8, 9, 15, 18)) %>%
+  drop_na(party_vote_intention) %>%
+  mutate(party = labelled::to_factor(party_vote_intention)) %>%
+  add_count(party, name = "n_group") %>%
+  filter(n_group >= 30) %>%
+  mutate(
+    party = fct_recode(party,
+      "Likud"             = "הליכוד",
+      "Yesh Atid"         = "יש עתיד",
+      "Religious Zionism" = "הציונות הדתית",
+      "National Unity"    = "המחנה הממלכתי",
+      "Shas"              = "ש\"ס",
+      "UTJ"               = "יהדות התורה",
+      "Yisrael Beiteinu"  = "ישראל ביתנו",
+      "The Democrats"     = "הדמוקרטים (עבודה מרץ)",
+      "Bennett's Party"   = "מפלגת בנט",
+      "Otzma Yehudit"     = "עוצמה יהודית",
+      "Eisenkot's Party"  = "ישר! גדי אייזנקוט"
+    ),
+    party_label = paste0(party, " (n = ", n_group, ")"),
+    party_label = fct_reorder(party_label,
+                              populist_attitudes_index_4dim,
+                              .fun = mean)
+  ) %>%
+  ggplot(aes(x = populist_attitudes_index_4dim,
+             y = party_label,
+             fill = party_label)) +
+  geom_density_ridges(
+    alpha = 0.80, color = "white", scale = 1.1
+  ) +
+  geom_vline(xintercept = 0.5, linetype = "dashed", color = "grey40") +
+  scale_x_continuous(breaks = seq(0, 1, 0.25),
+                     limits = c(-0.05, 1.05), expand = c(0, 0)) +
+  scale_fill_viridis_d(option = "mako", direction = -1, guide = "none") +
+  labs(
+    title    = "Populist attitudes by party vote intention",
+    subtitle = "Wave 1, Israel (Jan 2026). Parties ordered by mean populism. Parties with n < 30 excluded.",
+    x = "Populist attitudes index (4-dim, additive)",
+    y = NULL
+  ) +
+  theme_minimal(base_size = 14, base_family = "Open Sans") +
+  theme(
+    panel.background   = element_rect(fill = "white", color = NA),
+    plot.background    = element_rect(fill = "white", color = NA),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor   = element_blank(),
+    plot.title    = element_text(face = "bold", color = "#1F3343"),
+    plot.subtitle = element_text(size = 10, color = "grey40")
+  )
+```
+
+## By right–left ideology
+
+```{r}
+wave1 %>%
+  drop_na(right_left_ideology) %>%
+  ggplot(aes(x = right_left_ideology %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist attitudes index (4-dim, additive)",
+    title = "Populist attitudes by right–left ideology (1 = extreme right, 7 = extreme left)"
+  ) +
+  theme_minimal()
+```
+
+## By coalition camp (intended vote)
+
+Coarser two-camp split: respondents intending to vote for a current coalition party vs. opposition / other.
+
+```{r}
+# NOTE: original drop_na() targeted `coalition_party_vote_past` even though the
+# x-axis variable is `coalition_party_vote_intention`. Fixed.
+wave1 %>%
+  drop_na(coalition_party_vote_intention) %>%
+  ggplot(aes(x = coalition_party_vote_intention %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+              geom_hline(yintercept = 0.5, color = "red", linetype = "dashed",size=1) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist attitudes index (4-dim, additive)",
+    title = "Populist attitudes by coalition vs. opposition (voting intention)"
+  ) +
+  theme_minimal()
+```
+
+
+```{r}
+library(ggridges)
+library(dplyr)
+
+wave1 %>%
+  add_count(coalition_party_vote_intention, name = "n_group") %>%
+  ggplot(aes(x = populist_attitudes_index_4dim,
+             y = labelled::to_factor(coalition_party_vote_intention),
+             fill = labelled::to_factor(coalition_party_vote_intention),
+             weight = n_group)) +                 # ← זה הקסם
+  geom_density_ridges(
+    alpha = 0.80, color = "white", scale = 1.4,
+    quantile_lines = TRUE, quantiles = 2, linewidth = 0.5
+  ) +
+  geom_vline(xintercept = 0.5, linetype = "dashed", color = "grey40") +
+  scale_fill_brewer(palette = "Set2", guide = "none") +
+  labs(x = "Populist attitudes index", y = NULL,
+       title = "Populist attitudes by coalition vs. opposition") +
+  theme_minimal(base_size = 16, base_family = "Open Sans") +
+  theme(
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background  = element_rect(fill = "white", color = NA),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor   = element_blank()
+  )
+```
+
+```{r}
+library(ggridges)
+library(dplyr)
+
+wave1 %>%
+  mutate(group = labelled::to_factor(coalition_party_vote_intention)) %>%
+  add_count(group, name = "n_group") %>%
+  mutate(group_label = paste0(group, "\n(n = ", n_group, ")")) %>%
+  ggplot(aes(x = populist_attitudes_index_4dim,
+             y = forcats::fct_rev(group_label),
+             fill = group)) +
+  geom_density_ridges(
+    stat = "density",
+    aes(height = after_stat(density * n)),   # פרופורציוני ל-N
+    alpha = 0.80, color = "white", scale = 1.4,
+    quantile_lines = TRUE, quantiles = 2, linewidth = 0.5
+  ) +
+  geom_vline(xintercept = 0.5, linetype = "dashed",
+             color = "grey40", linewidth = 0.6) +
+  scale_x_continuous(breaks = seq(0, 1, 0.25),
+                     limits = c(-0.05, 1.05), expand = c(0, 0)) +
+  scale_fill_manual(values = c("Netanyahu coalition" = "#C44536",
+                               "Anti Netanyahu coalition" = "#2E5C8A",
+                               "Other" = "#8A8D91"),
+                    guide = "none") +
+  labs(
+    title = "Populist attitudes by coalition vs. opposition",
+    subtitle = "Wave 1, Israel (Jan 2026). Dashed line marks scale midpoint (0.5).",
+    x = "Populist attitudes index (4-dim, additive)",
+    y = NULL
+  ) +
+  theme_minimal(base_size = 16, base_family = "Open Sans") +
+  theme(
+    plot.background  = element_rect(fill = "white", color = NA),
+    panel.background = element_rect(fill = "white", color = NA),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor   = element_blank(),
+    panel.grid.major.x = element_line(color = "grey92"),
+    plot.title    = element_text(face = "bold", size = 18, color = "#1F3343"),
+    plot.subtitle = element_text(size = 12, color = "grey40",
+                                 margin = margin(b = 10)),
+    axis.title.x = element_text(size = 14, margin = margin(t = 8)),
+    axis.text.y  = element_text(size = 14, color = "#1F3343",
+                                lineheight = 0.9),
+    axis.text.x  = element_text(size = 12, color = "grey30"),
+    plot.margin  = margin(15, 20, 15, 15)
+  )
+```
+
+## By pro-Netanyahu coalition support
+
+```{r}
+wave1 %>%
+  drop_na(pro_netanyahu_coalition) %>%
+  ggplot(aes(x = pro_netanyahu_coalition %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+              geom_hline(yintercept = 0.5, color = "red", linetype = "dashed",size=1) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist attitudes index (4-dim, additive)",
+    title = "Populist attitudes by pro-Netanyahu coalition support"
+  ) +
+  theme_minimal()
+```
+
+## Anti-elitism dimension by partisanship
+
+The anti-elitism sub-dimension is theoretically the most likely to flip with the partisan position of the incumbent government. We replicate the partisanship breakdowns above using only the anti-elitism scale.
+
+### Cross-tabulations of partisanship variables
+
+How `party_vote_past`, `party_vote_intention`, `pro_netanyahu_coalition`, `religiosity`, and `coalition_party_vote_intention` line up with each other.
+
+```{r}
+wave1 |> labelled::to_factor() |>
+  dplyr::select(party_vote_past,
+                party_vote_intention,
+                pro_netanyahu_coalition,
+                religiosity) %>%
+  gtsummary::tbl_summary(by=pro_netanyahu_coalition)
+```
+
+```{r}
+wave1 |>
+  labelled::to_factor() |>
+  dplyr::select(
+    party_vote_intention,
+    party_vote_past,
+    coalition_party_vote_intention
+  ) %>%
+  gtsummary::tbl_summary(by = coalition_party_vote_intention)
+```
+
+### Anti-elitism by past vote
+
+```{r}
+wave1 %>%
+      filter(party_vote_intention!=9) %>%
+  mutate(
+    party_vote_past = labelled::to_factor(party_vote_past)
+  ) %>%
+  group_by(party_vote_past) %>%
+  mutate(mean_pop = mean(anti_elitism, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_past = fct_reorder(party_vote_past, mean_pop)) %>%
+  ggplot(aes(x = party_vote_past, y = anti_elitism)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Anti-elitism",
+    title = "Anti-elitism by past vote"
+  ) +
+  theme_minimal()
+```
+
+### Anti-elitism by voting intention
+
+```{r}
+wave1 %>%
+      filter(party_vote_intention!=9) %>%
+  mutate(
+    party_vote_intention = labelled::to_factor(party_vote_intention)
+  ) %>%
+  group_by(party_vote_intention) %>%
+  mutate(mean_pop = mean(anti_elitism, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_intention = fct_reorder(party_vote_intention, mean_pop)) %>%
+  ggplot(aes(x = party_vote_intention, y = anti_elitism)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Anti-elitism",
+    title = "Anti-elitism by voting intention"
+  ) +
+  theme_minimal()
+```
+
+### Anti-elitism by political block
+
+```{r}
+wave1 %>%
+  mutate(
+    political_block = labelled::to_factor(political_block)
+  ) %>%
+  group_by(political_block) %>%
+  mutate(mean_pop = mean(anti_elitism, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(political_block = fct_reorder(political_block, mean_pop)) %>%
+  ggplot(aes(x = political_block, y = anti_elitism)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Anti-elitism",
+    title = "Anti-elitism by political block"
+  ) +
+  theme_minimal()
+```
+
+### Anti-elitism by right–left ideology
+
+```{r}
+wave1 %>%
+  drop_na(right_left_ideology) %>%
+  ggplot(aes(x = right_left_ideology %>% labelled::to_factor(), y = anti_elitism)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Anti-elitism",
+    title = "Anti-elitism by right–left ideology"
+  ) +
+  theme_minimal()
+```
+
+
+
+
+
+## Homogeneity dimension by partisanship
+
+### Homogeneity by voting intention
+
+```{r}
+wave1 %>%
+      filter(party_vote_intention!=9) %>%
+  mutate(
+    party_vote_intention = labelled::to_factor(party_vote_intention)
+  ) %>%
+  group_by(party_vote_intention) %>%
+  mutate(mean_pop = mean(homogeneity, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_intention = fct_reorder(party_vote_intention, mean_pop)) %>%
+  ggplot(aes(x = party_vote_intention, y = homogeneity)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Homogeneity",
+    title = "Homogeneity by voting intention"
+  ) +
+  theme_minimal()
+```
+
+### Homogeneity distribution by coalition camp
+
+```{r}
+wave1 %>%
+  drop_na(coalition_party_vote_intention) %>%
+  ggplot(aes(x = homogeneity, fill = coalition_party_vote_intention %>% labelled::to_factor())) +
+  geom_bar(position=position_dodge()) +
+  labs(
+    x = "Homogeneity",
+    y = "Count",
+    fill = "Coalition camp",
+    title = "Distribution of homogeneity by coalition camp"
+  ) +
+  theme_minimal()
+```
+
+## Popular sovereignty dimension by partisanship
+
+### Popular sovereignty by voting intention
+
+```{r}
+wave1 %>%
+      filter(party_vote_intention!=9) %>%
+mutate(
+    party_vote_intention = labelled::to_factor(party_vote_intention)
+  ) %>%
+  group_by(party_vote_intention) %>%
+  mutate(mean_pop = mean(popular_sovereignty, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(party_vote_intention = fct_reorder(party_vote_intention, mean_pop)) %>%
+  ggplot(aes(x = party_vote_intention, y = popular_sovereignty)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Popular sovereignty",
+    title = "Popular sovereignty by voting intention"
+  ) +
+  theme_minimal()
+```
+
+### Popular sovereignty distribution by coalition camp
+
+```{r}
+wave1 %>%
+  drop_na(coalition_party_vote_intention) %>%
+  ggplot(aes(x = popular_sovereignty, fill = coalition_party_vote_intention %>% labelled::to_factor())) +
+  geom_bar(position=position_dodge()) +
+  labs(
+    x = "Popular sovereignty",
+    y = "Count",
+    fill = "Coalition camp",
+    title = "Distribution of popular sovereignty by coalition camp"
+  ) +
+  theme_minimal()
+```
+
+
+
+
+
+
+## Summary table — populism scales by pro-Netanyahu coalition
+
+Mean (SD) of every populism scale split by the pro-Netanyahu / anti-Netanyahu camps. A compact summary of the breakdowns above.
+
+```{r}
+wave1 %>%
+      dplyr::select(populist_attitudes_index_4dim,
+      anti_elitism,
+      homogeneity,
+      popular_sovereignty,
+      manichean,
+      pro_netanyahu_coalition) %>%
+        gtsummary::tbl_summary(statistic = list(all_continuous() ~ "{mean} ({sd})"),by=pro_netanyahu_coalition)
+```
+
+# Populist attitudes by demographics and other covariates
+
+Beyond partisanship, this section looks at populism levels across education, income, religiosity, public-sector employment, gender, affective polarization, and trust-related attitudes.
+
+## By education
+
+```{r}
+wave1 %>%
+  drop_na(education) %>%
+  ggplot(aes(x = education %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist attitudes index (4-dim, additive)",
+    title = "Populist attitudes by education"
+  ) +
+  theme_minimal()
+```
+
+## By income
+
+```{r}
+wave1 %>%
+  drop_na(income) %>%
+  ggplot(aes(x = income %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist attitudes index (4-dim, additive)",
+    title = "Populist attitudes by income (relative to average)"
+  ) +
+  theme_minimal()
+```
+
+## By religiosity
+
+```{r}
+wave1_labs %>%
+  drop_na(religiosity_label) %>%
+  ggplot(aes(x = religiosity_label %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist attitudes index (4-dim, additive)",
+    title = "Populist attitudes by religiosity"
+  ) +
+  theme_minimal()
+```
+
+
+## By current public-sector employment
+
+```{r}
+wave1 %>%
+  drop_na(public_sector_employee_current, populist_attitudes_index_4dim) %>%
+  mutate(public_sector_employee_current = labelled::to_factor(public_sector_employee_current)) %>%
+  ggplot(aes(x = populist_attitudes_index_4dim, fill = public_sector_employee_current)) +
+  geom_histogram(position = "identity", alpha = 0.5, bins = 30, color = "black") +
+  labs(
+    x = "Populist attitudes index (4-dim, additive)",
+    y = "Count",
+    fill = "Currently a public-sector employee",
+    title = "Distribution of populist attitudes by current public-sector employment"
+  ) +
+  theme_minimal()
+```
+
+## By gender
+
+```{r}
+wave1 %>%
+  drop_na(gender, populist_attitudes_index_4dim) %>%
+  mutate(gender = labelled::to_factor(gender)) %>%
+  ggplot(aes(x = populist_attitudes_index_4dim, fill = gender)) +
+  geom_histogram(position = "identity", alpha = 0.5, bins = 30, color = "black") +
+  labs(
+    x = "Populist attitudes index (4-dim, additive)",
+    y = "Count",
+    fill = "Gender",
+    title = "Distribution of populist attitudes by gender"
+  ) +
+  theme_minimal()
+```
+
+## By affect toward the right (`affect_right`)
+
+```{r}
+wave1 %>%
+  drop_na(affect_right) %>%
+  ggplot(aes(x = affect_right %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist attitudes index (4-dim, additive)",
+    title = "Populist attitudes (4-dim) by affect toward the right"
+  ) +
+  theme_minimal()
+```
+
+## By affect toward the left (`affect_left`)
+
+```{r}
+wave1 %>%
+  drop_na(affect_left) %>%
+  ggplot(aes(x = affect_left %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist attitudes index (4-dim, additive)",
+    title = "Populist attitudes by affect toward the left"
+  ) +
+  theme_minimal()
+```
+
+
+## By affective polarization
+
+```{r}
+wave1 %>%
+  drop_na(affective_polarization) %>%
+  ggplot(aes(x = affective_polarization %>% labelled::to_factor(), y = populist_attitudes_index_4dim)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+      stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist attitudes index (4-dim, additive)",
+    title = "Populist attitudes by affective polarization"
+  ) +
+  theme_minimal()
+```
+
+
+## Correlation matrix — populism, demographics, ideology, polarization
+
+A single lower-triangle correlation matrix combining the populism scales (and their composite indices) with demographics, ideology, external efficacy, affect / polarization, and general trust. Useful as a one-stop view of how populist attitudes line up with everything else in wave 1.
+
+```{r}
+wave1 %>%
+  dplyr::select(populist_attitudes_index_4dim,
+                populist_attitudes_index_4dim,
+                populist_attitudes_index_4dim_minimum,
+                populist_attitudes_index_4dim_multiplication,
+                popular_sovereignty:manichean,
+                female,
+                age_group,
+                income,
+                subjective_social_economic_status,
+                education,
+                religiosity,
+                right_left_ideology,
+                external_efficecy,
+                affect_right,
+                affect_left,
+                affective_polarization,
+                general_trust) %>% labelled::remove_labels() %>% 
+  sjPlot::tab_corr(triangle = "lower",
+  show.p = TRUE,
+  p.numeric = TRUE)
+```
+
+## OLS regressions — populism scales on demographics + politics
+
+Standardised OLS coefficients regressing each populism scale (overall index, then each of the four dimensions) on the same set of demographic and political predictors. Allows reading off which dimensions are most strongly tied to which covariates.
+
+NOTE: the variable `external_efficecy` is misspelled in the dataset (should be *efficacy*), but it is left as-is here to preserve compatibility with the data.
+
+```{r}
+model_1 <- lm(populist_attitudes_index_4dim ~ pro_netanyahu_coalition +
+  female +
+                age_group+
+                income+
+                education+
+                right_left_ideology+
+                external_efficecy+
+                subjective_social_economic_status +
+                affective_polarization,wave1 %>% labelled::remove_labels(),na.rm=T)
+
+model_2 <- model_1 %>% update(popular_sovereignty~.)
+model_3 <- model_1 %>% update(anti_elitism~.)
+model_4 <- model_1 %>% update(homogeneity~.)
+model_5 <- model_1 %>% update(manichean~.)
+
+
+sjPlot::tab_model(model_1,model_2,model_3,model_4,model_5,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T,
+                  dv.labels = c("Populism (4-dim)",
+                                "Popular sovereignty",
+                                "Anti-elitism",
+                                "Homogeneity",
+                                "Manichean"))
+```
+
+## External efficacy
+
+Since external efficacy turns out to be one of the stronger correlates, a few targeted views: its distribution by coalition camp, and its association with populism overall and within partisanship strata.
+
+```{r}
+# Histogram of external efficacy by pro-Netanyahu coalition
+wave1 |>
+  ggplot(aes(x = external_efficecy,fill=pro_netanyahu_coalition))+
+  geom_histogram(binwidth = 0.5, color = "black", alpha = 0.7,position = position_dodge()) +
+  labs(x = "External efficacy", y = "Count", fill = "Pro-Netanyahu coalition",
+       title = "Distribution of external efficacy by pro-Netanyahu coalition") +
+  theme_minimal()
+```
+
+
+```{r}
+# Populism vs. external efficacy by partisanship
+wave1 %>%
+  drop_na(external_efficecy) %>%
+  ggplot(aes(x = external_efficecy, y = populist_attitudes_index_4dim,color=pro_netanyahu_coalition)) +
+  geom_jitter() +
+  geom_smooth(method='lm')+
+  labs(x = "External efficacy",
+       y = "Populist attitudes index (4-dim, additive)",
+       color = "Pro-Netanyahu coalition",
+       title = "Populist attitudes vs. external efficacy by partisanship") +
+  theme_minimal()
+
+
+```
+
+
+```{r}
+# Pooled relationship between populism and external efficacy
+wave1 |>
+  ggplot(aes(x = external_efficecy, y = populist_attitudes_index_4dim)) +
+  geom_jitter(alpha=0.2) +
+  geom_smooth(method='lm',color='blue')+
+  labs(x = "External efficacy",
+       y = "Populist attitudes index (4-dim, additive)",
+       title = "Populist attitudes vs. external efficacy (pooled)") +
+  theme_minimal()
+
+```
+
+
+
+
+# Trust in institutions
+
+This section examines trust in eight institutions (Knesset, government, judiciary, health system, police, municipality, civil service, media) and how it relates to populist attitudes. Because trust in different institutions can move in opposite directions across partisan camps, we look at both pooled associations and within-camp associations.
+
+## Trust scores by coalition camp
+
+```{r}
+wave1 %>% labelled::remove_labels() %>%
+  dplyr::select(trust_knesset:trust_media,coalition_party_vote_intention) %>%
+  gtsummary::tbl_summary(
+statistic = list(by="coalition_party_vote_intention"))
+```
+
+Numeric mean trust scores across the eight institutions, by coalition camp.
+
+```{r}
+
+wave1 %>% labelled::remove_labels() |>
+  group_by(coalition_party_vote_intention) |>
+  summarise(
+    across(trust_knesset:trust_media, ~mean(.x, na.rm=TRUE))
+  )
+```
+
+## Reliability of an aggregate trust scale
+
+```{r}
+wave1 %>% labelled::remove_labels() %>%
+  dplyr::select(trust_knesset:trust_media) %>%
+  sjPlot::tab_itemscale()
+```
+
+## Correlations: populism × institutional trust
+
+Lower-triangular correlation between the populism dimensions / 4-dim index and each of the eight institutional trust items.
+
+```{r}
+wave1 %>% labelled::remove_labels() %>%
+  dplyr::select(populist_attitudes_index_4dim,                popular_sovereignty:manichean,
+trust_knesset:trust_media) %>%
+  sjPlot::tab_corr(triangle = "lower")
+```
+
+## Aggregate trust index
+
+Mean of the eight trust items, then its correlation with the 4-dim populism index.
+
+```{r}
+t1 <- wave1 %>%
+  mutate(trust_index = (trust_knesset+
+           trust_government+
+           trust_judiciary+
+           trust_health+
+           trust_police+
+           trust_municipality+
+           trust_civil_service+
+           trust_media)/8)
+
+
+t1 %>%
+  dplyr::select(populist_attitudes_index_4dim,trust_index) %>%
+  sjPlot::tab_corr()
+```
+
+```{r}
+wave1 %>% labelled::remove_labels() |>
+  dplyr::select(populist_attitudes_index_4dim,trust_knesset,
+           trust_government,
+           trust_judiciary,
+           trust_health,
+           trust_police,
+           trust_municipality,
+           trust_civil_service,
+           trust_media) |>
+  sjPlot::tab_corr()
+```
+
+## Populism and trust in government — pooled and split by coalition camp
+
+Pooled view first, then the same plot faceted by coalition camp. The pooled negative slope hides important between-camp variation.
+
+```{r}
+wave1 %>%
+  mutate(
+    trust_government = labelled::to_factor(trust_government)
+  ) %>%
+  ggplot(aes(x = trust_government, y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist attitudes index (4-dim, additive)",
+    title = "Populist attitudes by trust in government — pooled"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+wave1 %>%
+  mutate(
+    trust_government = labelled::to_factor(trust_government)
+  ) %>%
+  ggplot(aes(x = trust_government, y = populist_attitudes_index_4dim)) +
+  geom_point(alpha=0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, fill = "red", color = "black") +
+    stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2) +
+coord_flip() +
+  labs(
+    x = NULL,
+    y = "Populist attitudes index (4-dim, additive)",
+    title = "Populist attitudes by trust in government — by coalition camp"
+  ) +
+    facet_wrap(vars(coalition_party_vote_intention))+
+  theme_minimal()
+```
+
+## Models — trust in government on populism
+
+Five linear models: pooled, with coalition-camp control, split by camp, and a populism × coalition-camp interaction.
+
+```{r}
+tmod1 <- lm(trust_government ~ populist_attitudes_index_4dim, data = wave1 %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(. ~ . + pro_netanyahu_coalition)
+tmod3 <- tmod1 %>% update(. ~ ., data = wave1 %>% labelled::remove_labels() %>% filter(pro_netanyahu_coalition == "Netanyahu coalition"))
+tmod4 <- tmod1 %>% update(. ~ ., data = wave1 %>% labelled::remove_labels() %>% filter(pro_netanyahu_coalition == "Anti-Netanyahu/Other"))
+tmod5 <- tmod1 %>% update(. ~ . + populist_attitudes_index_4dim * pro_netanyahu_coalition)
+
+
+sjPlot::tab_model(tmod1,tmod2,tmod3,tmod4,tmod5,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T,
+                  dv.labels = c("Pooled", "+ camp", "Netanyahu camp",
+                                "Anti-Netanyahu camp", "Pooled + interaction"))
+```
+
+Predicted values from the interaction model — populism × coalition camp on trust in government.
+
+```{r}
+sjPlot::plot_model(tmod5, type = "pred", terms = c("populist_attitudes_index_4dim", "pro_netanyahu_coalition")) +
+  labs(title = "Predicted trust in government by populism × pro-Netanyahu coalition",
+       x = "Populist attitudes index (4-dim)",
+       y = "Predicted trust in government",
+       color = "Pro-Netanyahu coalition")
+```
+
+## Models — populism on trust in the Knesset
+
+Reverse-direction sanity check (regressing populism on trust in the Knesset, pooled and split by camp).
+
+```{r}
+tmod1 <- lm(populist_attitudes_index_4dim ~ trust_knesset, data = wave1 %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(. ~ ., data = wave1 %>% labelled::remove_labels() %>% filter(pro_netanyahu_coalition == "Netanyahu coalition"))
+tmod3 <- tmod1 %>% update(. ~ ., data = wave1 %>% labelled::remove_labels() %>% filter(pro_netanyahu_coalition == "Anti-Netanyahu/Other"))
+
+
+sjPlot::tab_model(tmod1,tmod2,tmod3,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T,
+                  dv.labels = c("Pooled", "Netanyahu camp", "Anti-Netanyahu camp"))
+```
+
+## Models — trust in the civil service on populism (4-dim index)
+
+Same template as for trust in government: pooled, +camp, split by camp, and pooled with interaction.
+
+```{r}
+tmod1 <- lm(trust_civil_service ~ populist_attitudes_index_4dim, data = wave1 %>% labelled::remove_labels())
+tmod2 <- tmod1 %>% update(. ~ . + pro_netanyahu_coalition)
+tmod3 <- tmod1 %>% update(. ~ ., data = wave1 %>% labelled::remove_labels() %>% filter(pro_netanyahu_coalition == "Netanyahu coalition"))
+tmod4 <- tmod1 %>% update(. ~ ., data = wave1 %>% labelled::remove_labels() %>% filter(pro_netanyahu_coalition == "Anti-Netanyahu/Other"))
+tmod5 <- tmod1 %>% update(. ~ . + populist_attitudes_index_4dim * pro_netanyahu_coalition)
+
+
+sjPlot::tab_model(tmod1,tmod2,tmod3,tmod4,tmod5,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T,
+                  dv.labels = c("Pooled", "+ camp", "Netanyahu camp",
+                                "Anti-Netanyahu camp", "Pooled + interaction"))
+```
+
+```{r}
+sjPlot::plot_model(tmod5, type = "pred", terms = c("populist_attitudes_index_4dim", "pro_netanyahu_coalition")) +
+  labs(title = "Predicted trust in civil service by populism × pro-Netanyahu coalition",
+       x = "Populist attitudes index (4-dim)",
+       y = "Predicted trust in civil service",
+       color = "Pro-Netanyahu coalition")
+```
+
+
+## Trust × populism correlations, by camp
+
+The same trust-populism correlation matrix shown earlier, repeated within each coalition camp. This is where cross-pressured patterns are easiest to spot — e.g., anti-elitism may correlate negatively with trust in some institutions in one camp and positively in the other.
+
+```{r}
+wave1 %>% labelled::remove_labels() %>%
+  dplyr::select(populist_attitudes_index_4dim,                popular_sovereignty:manichean,
+trust_knesset:trust_media) %>%
+  sjPlot::tab_corr(triangle = "lower",
+  title = "All respondents")
+```
+
+```{r}
+wave1 %>% filter(coalition_party_vote_intention=="Netanyahu coalition") %>% labelled::remove_labels() %>%
+  dplyr::select(populist_attitudes_index_4dim,                popular_sovereignty:manichean,
+trust_knesset:trust_media) %>%
+  sjPlot::tab_corr(triangle = "lower",
+  title = "Netanyahu coalition")
+```
+
+```{r}
+wave1 %>% filter(coalition_party_vote_intention=="Anti Netanyahu coalition") %>% labelled::remove_labels() %>%
+  dplyr::select(populist_attitudes_index_4dim,                popular_sovereignty:manichean,
+trust_knesset:trust_media) %>%
+  sjPlot::tab_corr(triangle = "lower",
+  title = "Anti Netanyahu coalition")
+```
+
+
+
+## Trust in civil service — distributions and full model build-up
+
+### Distribution of trust in the civil service — pooled
+
+```{r}
+wave1 |>
+  labelled::remove_labels() |>
+  ggplot(aes(x = trust_civil_service)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Distribution of trust in the civil service — pooled",
+    x = "Trust in civil service score",
+    y = "Count"
+  ) +
+  theme_minimal()
+
+```
+
+
+### Distribution of trust in the civil service — by coalition camp
+
+```{r}
+wave1 |>
+  labelled::remove_labels() |>
+  ggplot(aes(x = trust_civil_service)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
+  facet_wrap(vars(coalition_party_vote_intention))+
+  labs(
+    title = "Distribution of trust in the civil service — by coalition camp",
+    x = "Trust in civil service score",
+    y = "Count"
+  ) +
+  theme_minimal()
+
+```
+
+### Trust in civil service ~ populism (4-dim) — full model build-up
+
+Models 1–8: progressive controls. Odd-numbered models add main effects; even-numbered models add the populism × coalition interaction.
+
+```{r}
+model_1 <- lm(trust_civil_service ~ populist_attitudes_index_4dim + pro_netanyahu_coalition,wave1 %>% labelled::remove_labels(),na.rm=T)
+
+model_2 <- model_1 %>% update(.~.+populist_attitudes_index_4dim*(pro_netanyahu_coalition))
+
+model_3 <- model_1 %>% update(.~.+
+  female +
+                age_group+
+                income+
+                education)
+model_4 <- model_3 %>% update(.~.+populist_attitudes_index_4dim*(pro_netanyahu_coalition))
+
+
+model_5 <- model_3 %>% update(.~.+
+  right_left_ideology)
+
+model_6 <- model_5 %>% update(.~.+populist_attitudes_index_4dim*(pro_netanyahu_coalition))
+
+model_7 <- model_5 %>% update(.~.+
+                external_efficecy+
+                subjective_social_economic_status +
+                affective_polarization)
+
+model_8 <- model_7 %>% update(.~.+populist_attitudes_index_4dim*(pro_netanyahu_coalition))
+
+
+
+sjPlot::tab_model(model_1,model_2,model_3,model_4,model_5,model_6,model_7,model_8,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+Predicted trust in civil service from model 4 (demographics + populism × coalition).
+
+```{r}
+sjPlot::plot_model(model_4,type = "pred",terms = c("populist_attitudes_index_4dim", "pro_netanyahu_coalition"))+
+  labs(title="Trust in civil service — populism × partisanship",
+  x="Populist attitudes index (4-dim)",
+  color="Partisanship")+
+  theme_classic()
+```
+
+```{r}
+anova(model_4)
+```
+
+### Trust in civil service ~ anti-elitism — full model build-up
+
+Same model build-up, but using only the anti-elitism sub-dimension as the predictor of interest. This isolates the dimension most theoretically tied to trust in state institutions.
+
+```{r}
+model_1 <- lm(trust_civil_service ~ anti_elitism + pro_netanyahu_coalition,wave1 %>% labelled::remove_labels(),na.rm=T)
+
+model_2 <- model_1 %>% update(.~.+anti_elitism*(pro_netanyahu_coalition))
+
+model_3 <- model_1 %>% update(.~.+
+  female +
+                age_group+
+                income+
+                education)
+model_4 <- model_3 %>% update(.~.+anti_elitism*(pro_netanyahu_coalition))
+
+
+model_5 <- model_3 %>% update(.~.+
+  right_left_ideology)
+
+model_6 <- model_5 %>% update(.~.+anti_elitism*(pro_netanyahu_coalition))
+
+model_7 <- model_5 %>% update(.~.+
+                external_efficecy+
+                subjective_social_economic_status +
+                affective_polarization)
+
+model_8 <- model_7 %>% update(.~.+anti_elitism*(pro_netanyahu_coalition))
+
+
+
+sjPlot::tab_model(model_1,model_2,model_3,model_4,model_5,model_6,model_7,model_8,
+                  show.est = F,
+                  show.std = T,
+                  collapse.ci = T)
+```
+
+
+
+
+# Coefficients for populism × controls — bivariate and multivariate
+
+```{r}
+#| label: bivariate-and-multivariate-corr-controls-populism
+#| fig-width: 7.5
+#| fig-height: 5
+
+# Bivariate (Pearson r) and multivariate (standardized OLS beta from a model
+# with ALL controls included simultaneously) coefficients for each control on
+# populist_attitudes_index_4dim.
+
+dat_corr <- wave1 |>
+  labelled::remove_labels() |>
+  dplyr::transmute(
+    populist_attitudes_index_4dim    = as.numeric(populist_attitudes_index_4dim),
+    `Female (vs Male)`               = dplyr::case_when(gender == 2 ~ 1,
+                                                        gender == 1 ~ 0,
+                                                        TRUE ~ NA_real_),
+    `Age group`                      = as.numeric(age_group),
+    `Education`                      = as.numeric(education),
+    `Income`                         = as.numeric(income),
+    `Subjective SES`                 = as.numeric(subjective_social_economic_status),
+    `Public-sector experience`       = as.numeric(public_sector_experience),
+    `Right–left ideology`            = as.numeric(right_left_ideology),
+    `Affective polarization`         = as.numeric(affective_polarization),
+    `External efficacy`              = as.numeric(external_efficecy),
+    `Pro-Netanyahu coalition`        = dplyr::case_when(
+                                          pro_netanyahu_coalition == "Netanyahu coalition" ~ 1,
+                                          pro_netanyahu_coalition == "Anti-Netanyahu/Other" ~ 0,
+                                          TRUE ~ NA_real_)
+  )
+
+ctrl_vars <- setdiff(names(dat_corr), "populist_attitudes_index_4dim")
+
+# ---- Bivariate Pearson r with 95% CIs ----
+biv_tbl <- purrr::map_dfr(ctrl_vars, function(v) {
+  ct <- suppressWarnings(
+    cor.test(dat_corr$populist_attitudes_index_4dim, dat_corr[[v]],
+             use = "pairwise.complete.obs")
+  )
+  tibble::tibble(
+    term      = v,
+    estimate  = unname(ct$estimate),
+    conf.low  = ct$conf.int[1],
+    conf.high = ct$conf.int[2],
+    spec      = "Bivariate"
+  )
+})
+
+# ---- Multivariate: standardize continuous vars + outcome, keep binaries 0/1 ----
+binary_vars <- c("Female (vs Male)", "Public-sector experience", "Pro-Netanyahu coalition")
+cont_vars   <- setdiff(ctrl_vars, binary_vars)
+
+z <- function(x) as.numeric(scale(x))
+dat_mv <- dat_corr |>
+  dplyr::mutate(
+    populist_attitudes_index_4dim = z(populist_attitudes_index_4dim),
+    dplyr::across(dplyr::all_of(cont_vars), z)
+  )
+
+# reformulate needs syntactic names; use backticks
+rhs <- paste0("`", ctrl_vars, "`", collapse = " + ")
+mv_fit <- lm(as.formula(paste("populist_attitudes_index_4dim ~", rhs)),
+             data = dat_mv)
+
+mv_tbl <- broom::tidy(mv_fit, conf.int = TRUE, conf.level = 0.95) |>
+  dplyr::filter(term != "(Intercept)") |>
+  dplyr::mutate(term = gsub("`", "", term),
+                spec = "Multivariate (all controls)") |>
+  dplyr::select(term, estimate, conf.low, conf.high, spec)
+
+# ---- Combine and order ----
+plot_tbl <- dplyr::bind_rows(biv_tbl, mv_tbl) |>
+  dplyr::mutate(
+    spec = factor(spec, levels = c("Bivariate", "Multivariate (all controls)")),
+    term = forcats::fct_reorder(term, estimate, .fun = function(x) x[1])
+  )
+
+dodge <- ggplot2::position_dodge(width = 0.55)
+
+ggplot2::ggplot(plot_tbl,
+                ggplot2::aes(x = estimate, y = term,
+                             colour = spec, linetype = spec, shape = spec)) +
+  ggplot2::geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
+  ggplot2::geom_errorbarh(ggplot2::aes(xmin = conf.low, xmax = conf.high),
+                          height = 0.18, position = dodge, linewidth = 0.6) +
+  ggplot2::geom_point(size = 2.4, position = dodge, fill = "white") +
+  ggplot2::scale_linetype_manual(values = c("Bivariate" = "solid",
+                                            "Multivariate (all controls)" = "dashed")) +
+  ggplot2::scale_shape_manual(values = c("Bivariate" = 16,
+                                         "Multivariate (all controls)" = 21)) +
+  ggplot2::scale_colour_manual(values = c("Bivariate" = "#2C3E50",
+                                          "Multivariate (all controls)" = "#C0392B")) +
+  ggplot2::scale_x_continuous(breaks = scales::pretty_breaks(6)) +
+  ggplot2::labs(
+    x = "Standardized coefficient on populist_attitudes_index_4dim",
+    y = NULL,
+    colour = NULL, linetype = NULL, shape = NULL,
+    title    = "Controls and populism: bivariate vs. multivariate coefficients",
+    subtitle = "Bivariate = Pearson r (solid CI); Multivariate = std. OLS beta from model with all controls (dashed CI). 95% CIs."
+  ) +
+  ggplot2::theme_minimal(base_size = 11) +
+  ggplot2::theme(
+    panel.grid.major.y = ggplot2::element_blank(),
+    plot.title.position = "plot",
+    legend.position = "bottom"
+  )
+```

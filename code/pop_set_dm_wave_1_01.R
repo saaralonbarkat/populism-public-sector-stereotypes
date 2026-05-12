@@ -31,8 +31,11 @@ wave1 <- wave1 %>%
         general_trust = ifelse(q40==1,1,0),
   ) %>% 
   mutate(female = ifelse(gender==2,1,0)) %>% 
-  mutate(public_sector_employee_current = ifelse(sector_employment==1, 1,0),
-         public_sector_experience = ifelse(sector_employment==1 | public_sector_past==1, 1,0)) %>% 
+  mutate(
+  public_sector_employee_current = as.integer(sector_employment %in% 1),
+  public_sector_experience       = as.integer(sector_employment %in% 1 |
+                                              public_sector_past  %in% 1)
+) |> 
 
 # Political variables
 
